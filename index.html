@@ -23,16 +23,67 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="/style.css" />
+  <!-- Inline styles: avoids broken external style loading on Vercel -->
+  <style>
+  /* style.css (inlined) */
+  :root{ --sand:#d6c2a2; --gold:#f5b63a; --red:#dc2626; }
+  *{ color:white; }
 
+  .hero-title{ font-family:'Fraunces', serif; font-weight:600; font-size:clamp(2rem,3.4vw,3.2rem); line-height:1.02; letter-spacing:-0.02em; text-shadow:0 18px 55px rgba(0,0,0,0.75); }
+  .hero-sub{ color:rgba(214,194,162,0.92); font-size:0.98rem; line-height:1.6; max-width:52ch; }
+  .section-title{ display:flex; flex-direction:column; gap:8px; }
+  .glass-card{ background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.10); box-shadow:0 24px 70px rgba(0,0,0,0.6); border-radius:18px; }
+
+  .nav-link{ position:relative; color:rgba(214,194,162,0.8); transition:color 160ms ease; }
+  .nav-link::after{ content:''; position:absolute; left:0; bottom:-10px; width:0; height:2px; background:rgba(220,38,38,0.9); transition:width 220ms ease; }
+  .nav-link:hover{ color:rgba(255,255,255,0.95); }
+  .nav-link:hover::after{ width:100%; }
+
+  .btn{ display:inline-flex; align-items:center; gap:10px; border-radius:14px; padding:12px 16px; font-weight:600; border:1px solid transparent; transition:transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease; }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:linear-gradient(135deg,rgba(220,38,38,0.95),rgba(185,28,28,0.95)); border-color:rgba(255,255,255,0.08); box-shadow:0 18px 45px rgba(220,38,38,0.25); color:white; }
+  .btn-primary:hover{ box-shadow:0 22px 65px rgba(220,38,38,0.33); }
+  .btn-ghost{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); color:rgba(214,194,162,0.95); }
+  .btn-ghost:hover{ background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.18); }
+
+  .btn-primary-sm{ display:inline-flex; align-items:center; justify-content:center; border-radius:12px; padding:10px 12px; font-weight:700; background:linear-gradient(135deg,rgba(220,38,38,0.95),rgba(185,28,28,0.95)); border:1px solid rgba(255,255,255,0.08); color:white; transition:transform 180ms ease, box-shadow 180ms ease; }
+  .btn-primary-sm:hover{ box-shadow:0 22px 65px rgba(220,38,38,0.33); }
+
+  .card-mini{ border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04); border-radius:16px; padding:12px; }
+  .stat{ border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.03); border-radius:16px; padding:10px; }
+  .stat-num{ font-family:'Fraunces', serif; color:rgba(255,255,255,0.95); font-weight:600; letter-spacing:-0.02em; }
+  .stat-label{ margin-top:2px; font-size:11px; color:rgba(214,194,162,0.75); }
+
+  .input{ width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); padding:12px 14px; color:rgba(255,255,255,0.95); outline:none; transition:border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+  .input::placeholder{ color:rgba(214,194,162,0.5); }
+  .input:focus{ border-color:rgba(220,38,38,0.55); box-shadow:0 0 0 4px rgba(220,38,38,0.15); background:rgba(255,255,255,0.06); }
+
+  .check{ width:18px; height:18px; border-radius:6px; background:rgba(220,38,38,0.15); border:1px solid rgba(220,38,38,0.35); position:relative; margin-top:2px; }
+  .check::after{ content:''; position:absolute; top:4px; left:5px; width:6px; height:3px; border-left:2px solid rgba(255,255,255,0.85); border-bottom:2px solid rgba(255,255,255,0.85); transform:rotate(-45deg); }
+  .dot{ width:8px; height:8px; border-radius:999px; background:rgba(220,38,38,0.75); margin-top:8px; }
+
+  .step-card{ border-radius:18px; border:1px solid rgba(255,255,255,0.10); background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); padding:18px; box-shadow:0 22px 70px rgba(0,0,0,0.55); transition:transform 180ms ease, border-color 180ms ease; }
+  .step-card:hover{ transform:translateY(-3px); border-color:rgba(220,38,38,0.35); }
+  .step-top{ display:flex; align-items:center; justify-content:flex-start; }
+  .step-badge{ width:36px; height:36px; border-radius:14px; background:rgba(220,38,38,0.14); border:1px solid rgba(220,38,38,0.40); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.95); font-weight:800; }
+
+  .social{ color:rgba(214,194,162,0.85); font-size:13px; padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04); transition:transform 160ms ease, background 160ms ease, border-color 160ms ease; }
+  .social:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.95); }
+
+  .doc-card{ border-radius:18px; border:1px solid rgba(255,255,255,0.10); background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); overflow:hidden; transition:transform 220ms ease, border-color 220ms ease; }
+  .doc-card:hover{ transform:translateY(-4px); border-color:rgba(220,38,38,0.35); }
+  .doc-thumb{ position:relative; height:180px; background-size:cover; background-position:center; }
+  .doc-thumb::after{ content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.12)); }
+  .doc-meta{ position:relative; z-index:2; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+  </style>
 </head>
 <body class="bg-black text-white selection:bg-red-700 selection:text-white">
-  <!-- Background cinematic grain + vignette -->
   <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(200,16,46,0.20),transparent_45%),radial-gradient(ellipse_at_bottom,rgba(15,23,42,0.75),transparent_55%)]"></div>
   <div class="fixed inset-0 pointer-events-none opacity-35 mix-blend-overlay" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27120%27 height=%27120%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter=%27url(%23n)%27 opacity=%270.35%27/%3E%3C/svg%3E');"></div>
   <div class="relative">
 
-    <!-- Top nav -->
     <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -86,9 +137,7 @@
             </p>
 
             <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
-              <a href="#pricing" class="btn btn-primary">
-                Subscribe for 2,000 RWF/month
-              </a>
+              <a href="#pricing" class="btn btn-primary">Subscribe for 2,000 RWF/month</a>
               <a href="#library" class="btn btn-ghost">Explore the library</a>
             </div>
 
@@ -112,8 +161,6 @@
             </div>
 
           </div>
-
-
 
           <div class="relative">
             <div class="glass-card p-5 md:p-6">
@@ -164,7 +211,6 @@
       </div>
     </section>
 
-    <!-- About -->
     <section id="about" class="mx-auto max-w-6xl px-4 sm:px-6 py-14">
       <div class="section-title">
         <h2 class="text-2xl md:text-3xl font-semibold text-white">About Aime Christian</h2>
@@ -184,11 +230,7 @@
               </div>
             </div>
             <p class="mt-4 text-sm md:text-base text-sand/85 leading-relaxed">
-              Aime Christian is a Rwandan Independent Documentary Maker. Murakaza neza mubwami bukuru bw'ibyegeranyo mu Rwanda.
-            </p>
-            <p class="mt-4 text-sm text-sand/80 leading-relaxed">
-              His mission is simple: capture truth with respect, preserve culture, and document real stories that matter.
-              <span class="text-sand/90"> Every release is built to educate, inspire, and drive meaningful conversation.</span>
+              Aime Christian is a Rwandan Independent Documentary Maker.
             </p>
           </div>
         </div>
@@ -197,47 +239,23 @@
           <div class="glass-card p-6">
             <h3 class="text-lg font-semibold text-white">What you’ll get</h3>
             <ul class="mt-3 space-y-3 text-sm text-sand/85">
-              <li class="flex gap-3">
-                <span class="mt-1 h-5 w-5 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center">
-                  <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                </span>
-                <span><span class="text-white font-medium">Ad-free viewing</span> for a clean, cinematic experience.</span>
-              </li>
-              <li class="flex gap-3">
-                <span class="mt-1 h-5 w-5 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center">
-                  <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                </span>
-                <span><span class="text-white font-medium">Full documentaries</span>, including uncut storytelling and investigations.</span>
-              </li>
-              <li class="flex gap-3">
-                <span class="mt-1 h-5 w-5 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center">
-                  <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                </span>
-                <span><span class="text-white font-medium">Support independent film</span> with early access and better production quality.</span>
-              </li>
+              <li class="flex gap-3"><span class="mt-1 h-5 w-5 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center"><span class="h-2 w-2 rounded-full bg-red-500"></span></span><span><span class="text-white font-medium">Ad-free viewing</span></span></li>
+              <li class="flex gap-3"><span class="mt-1 h-5 w-5 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center"><span class="h-2 w-2 rounded-full bg-red-500"></span></span><span><span class="text-white font-medium">Full documentaries</span></span></li>
             </ul>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Library / Documentaries -->
     <section id="library" class="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
       <div class="section-title">
         <h2 class="text-2xl md:text-3xl font-semibold text-white">Documentaries Library</h2>
-        <p class="text-sand/70">Tap a title to play. Subscribed viewers get full access.</p>
+        <p class="text-sand/70">Tap a title to play.</p>
       </div>
-
-      <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="docGrid">
-        <!-- Cards injected by JS -->
-      </div>
-
-      <div id="libraryEmpty" class="hidden mt-8 glass-card p-6 text-sand/80">
-        No documents available yet.
-      </div>
+      <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="docGrid"></div>
+      <div id="libraryEmpty" class="hidden mt-8 glass-card p-6 text-sand/80">No documents available yet.</div>
     </section>
 
-    <!-- Pricing / Paywall -->
     <section id="pricing" class="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
       <div class="section-title">
         <h2 class="text-2xl md:text-3xl font-semibold text-white">Pricing & Paywall</h2>
@@ -252,63 +270,14 @@
               <h3 class="text-3xl font-semibold text-white mt-1">2,000 <span class="text-gold">RWF</span> / month</h3>
               <p class="text-sm text-sand/80 mt-2">Unlock all full documentaries ad-free.</p>
             </div>
-            <div class="hidden sm:block px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10">
-              <p class="text-xs text-red-200 font-semibold">Ad-Free</p>
-              <p class="text-xs text-sand/70">No interruptions</p>
-            </div>
-          </div>
-
-          <div class="mt-6">
-            <h4 class="text-sm font-semibold text-white">Benefits</h4>
-            <ul class="mt-3 space-y-3 text-sm text-sand/85">
-              <li class="flex gap-3"><span class="check"></span><span><span class="text-white font-medium">Full ad-free documentaries</span></span></li>
-              <li class="flex gap-3"><span class="check"></span><span>Early access to new releases</span></li>
-              <li class="flex gap-3"><span class="check"></span><span>High quality (1080p)</span></li>
-              <li class="flex gap-3"><span class="check"></span><span>Cancel anytime</span></li>
-            </ul>
-          </div>
-
-          <div class="mt-7 rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p class="text-xs text-sand/70">Payment method</p>
-            <p class="mt-1 text-sm font-semibold text-white">MTN MoMo</p>
-            <p class="text-xs text-sand/70 mt-1">Manual verification supported</p>
           </div>
 
           <div class="mt-7">
-            <button id="momoPayBtn" class="btn btn-primary w-full justify-center">
-              Pay with MTN MoMo
-            </button>
-            <p class="mt-3 text-xs text-sand/70 text-center">
-              After payment submission, your access will be enabled (fake state via localStorage for demo).
-            </p>
+            <button id="momoPayBtn" class="btn btn-primary w-full justify-center">Pay with MTN MoMo</button>
           </div>
 
           <div id="momoInstructions" class="hidden mt-6">
             <div class="rounded-2xl border border-white/10 bg-black/20 p-5">
-              <div class="flex items-center justify-between gap-4">
-                <div>
-                  <p class="text-xs text-sand/70">MoMo instructions</p>
-                  <p class="text-sm font-semibold text-white">Complete your payment</p>
-                </div>
-                <span class="inline-flex items-center rounded-full bg-red-500/10 border border-red-500/30 px-3 py-1 text-xs text-red-200">
-                  Secure & reliable
-                </span>
-              </div>
-
-              <ol class="mt-4 space-y-3 text-sm text-sand/85">
-                <li class="flex gap-3"><span class="step">1</span><span>Open your MTN MoMo app</span></li>
-                <li class="flex gap-3"><span class="step">2</span><span>Send RWF to pay code:</span></li>
-              </ol>
-
-              <div class="mt-3 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3">
-                <p class="text-xs text-sand/70">Pay Code</p>
-                <p class="text-base md:text-lg font-semibold text-gold tracking-wide">*182*8*1*123456#</p>
-              </div>
-
-              <p class="mt-4 text-xs text-sand/70">
-                Then submit your phone number and transaction ID below for verification.
-              </p>
-
               <form id="momoForm" class="mt-5 space-y-3">
                 <div>
                   <label class="text-xs text-sand/70" for="phone">Phone number</label>
@@ -318,14 +287,7 @@
                   <label class="text-xs text-sand/70" for="txid">Transaction ID</label>
                   <input id="txid" name="txid" placeholder="e.g. ABC123XYZ" class="input" required />
                 </div>
-
-                <button type="submit" class="btn btn-primary w-full justify-center">
-                  Submit payment
-                </button>
-
-                <p class="text-xs text-sand/60">
-                  Demo note: subscription state toggles locally in your browser.
-                </p>
+                <button type="submit" class="btn btn-primary w-full justify-center">Submit payment</button>
               </form>
 
               <div id="momoStatus" class="mt-4 hidden" role="status" aria-live="polite">
@@ -343,14 +305,11 @@
               <div id="momoSuccess" class="hidden mt-4">
                 <div class="rounded-xl border border-green-500/30 bg-green-500/10 p-4">
                   <p class="text-sm font-semibold text-green-200">Payment received ✅</p>
-                  <p class="text-xs text-sand/80 mt-1">Your subscription is now active (demo). Paywalls are removed.</p>
                 </div>
               </div>
 
               <div class="mt-4">
-                <button id="resetSubBtn" class="btn btn-ghost w-full justify-center">
-                  Reset subscription (demo)
-                </button>
+                <button id="resetSubBtn" class="btn btn-ghost w-full justify-center">Reset subscription (demo)</button>
               </div>
             </div>
           </div>
@@ -358,7 +317,7 @@
 
         <div class="glass-card p-6 md:p-8">
           <h3 class="text-lg font-semibold text-white">Access preview</h3>
-          <p class="text-sm text-sand/80 mt-2">This panel updates based on your subscription status.</p>
+          <p class="text-sm text-sand/80 mt-2">Updates based on demo subscription state.</p>
 
           <div class="mt-6 grid gap-4">
             <div class="rounded-2xl border border-white/10 bg-black/20 p-5">
@@ -366,67 +325,23 @@
               <p class="text-sm font-semibold text-white" id="statusText">Free</p>
               <p class="text-xs text-sand/70 mt-1" id="statusSubText">Pay to unlock ad-free documentaries.</p>
             </div>
-
-            <div class="rounded-2xl border border-white/10 bg-black/20 p-5">
-              <p class="text-xs text-sand/70">What changes when subscribed</p>
-              <ul class="mt-3 space-y-2 text-sm text-sand/85" id="statusList">
-                <li class="flex gap-2"><span class="dot"></span> Locked overlays disappear</li>
-                <li class="flex gap-2"><span class="dot"></span> Embedded players appear</li>
-                <li class="flex gap-2"><span class="dot"></span> Ad-free experience (placeholder)</li>
-              </ul>
-            </div>
-
-            <div class="rounded-2xl border border-white/10 bg-gradient-to-br from-red-950/40 to-black p-5">
-              <p class="text-xs text-sand/70">Kinyarwanda note</p>
-              <p class="text-sm text-sand/90 mt-2">
-                <span class="text-gold font-semibold">Murakaza neza!</span> Dufatanye gushyigikira inkuru z’Umwimerere, zinyuze mu nzira nziza.
-              </p>
-            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- How it works -->
     <section id="how" class="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
       <div class="section-title">
         <h2 class="text-2xl md:text-3xl font-semibold text-white">How It Works</h2>
-        <p class="text-sand/70">Simple steps to unlock premium documentary access.</p>
       </div>
-
       <div class="mt-8 grid md:grid-cols-4 gap-4">
-        <div class="step-card">
-          <div class="step-top">
-            <div class="step-badge">1</div>
-          </div>
-          <h3 class="text-white font-semibold">Choose the plan</h3>
-          <p class="text-sand/80 text-sm mt-2">Pay 2,000 RWF/month for ad-free access.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-top">
-            <div class="step-badge">2</div>
-          </div>
-          <h3 class="text-white font-semibold">Pay via MTN MoMo</h3>
-          <p class="text-sand/80 text-sm mt-2">Use the MoMo pay code and submit your transaction.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-top">
-            <div class="step-badge">3</div>
-          </div>
-          <h3 class="text-white font-semibold">Verification</h3>
-          <p class="text-sand/80 text-sm mt-2">We validate the transaction (demo toggles locally).</p>
-        </div>
-        <div class="step-card">
-          <div class="step-top">
-            <div class="step-badge">4</div>
-          </div>
-          <h3 class="text-white font-semibold">Watch ad-free</h3>
-          <p class="text-sand/80 text-sm mt-2">Unlock all documentaries with smooth playback.</p>
-        </div>
+        <div class="step-card"><div class="step-top"><div class="step-badge">1</div></div><h3 class="text-white font-semibold">Choose the plan</h3></div>
+        <div class="step-card"><div class="step-top"><div class="step-badge">2</div></div><h3 class="text-white font-semibold">Pay via MTN MoMo</h3></div>
+        <div class="step-card"><div class="step-top"><div class="step-badge">3</div></div><h3 class="text-white font-semibold">Verification</h3></div>
+        <div class="step-card"><div class="step-top"><div class="step-badge">4</div></div><h3 class="text-white font-semibold">Watch ad-free</h3></div>
       </div>
     </section>
 
-    <!-- Footer -->
     <footer class="border-t border-white/5 bg-black/70 backdrop-blur">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 py-10">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -434,30 +349,154 @@
             <p class="font-semibold text-white">Aime Christian</p>
             <p class="text-xs text-sand/70 mt-1">Premium documentary subscriptions — ad-free.</p>
           </div>
-
           <div class="flex flex-wrap items-center gap-4">
             <a href="https://www.youtube.com/@Aimechristian01" target="_blank" class="social">YouTube</a>
             <a href="https://www.instagram.com/aimechristian01/" target="_blank" class="social">Instagram</a>
             <a href="#pricing" class="social">Subscribe</a>
             <a id="adminBtn" href="/admin.html" class="social">admin</a>
-
           </div>
         </div>
 
         <div class="mt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <p class="text-xs text-sand/60">© <span id="year"></span> Aime Christian. All rights reserved.</p>
-          <p class="text-xs text-sand/60">Built for premium ad-free documentary access.</p>
         </div>
       </div>
     </footer>
 
   </div>
 
-  <!-- JS -->
-  <script src="/script.js"></script>
+  <!-- Inline script.js: avoids broken external script loading on Vercel -->
+  <script>
+  // script.js (inlined)
+  const SUB_KEY = 'aimechristian_subscribed_v1';
 
+  const DOCUMENTARIES = [
+    { id:'doc-1', title:'Inyenyeri z’Ubwenge', duration:'43:12', description:'Rwanda — stories of resilience and the truth behind the headlines.', thumbnail:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=900&q=70', embedUrl:'https://www.youtube.com/embed/ScMzIvxBSi4?rel=0' },
+    { id:'doc-2', title:'Inkuru y’Igihango', duration:'58:05', description:'An investigation into culture, leadership, and community memory.', thumbnail:'https://images.unsplash.com/photo-1520975958225-9f06e1e8c7d7?auto=format&fit=crop&w=900&q=70', embedUrl:'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0' }
+  ];
 
-  <!-- Admin: server-side auth + upload panel -->
+  function getSubscribed(){ return localStorage.getItem(SUB_KEY) === 'true'; }
+  function setSubscribed(val){ localStorage.setItem(SUB_KEY, val ? 'true' : 'false'); }
+
+  function smoothScrollTo(hash){ const el = document.querySelector(hash); if(!el) return; el.scrollIntoView({ behavior:'smooth', block:'start' }); }
+
+  function renderDocumentaries(){
+    const grid = document.getElementById('docGrid');
+    const empty = document.getElementById('libraryEmpty');
+    const subscribed = getSubscribed();
+    if(!grid) return;
+
+    if(DOCUMENTARIES.length === 0){ grid.innerHTML=''; empty?.classList.remove('hidden'); return; }
+    empty?.classList.add('hidden');
+
+    grid.innerHTML = DOCUMENTARIES.map(doc => {
+      const locked = !subscribed;
+      return `
+        <article class="doc-card" data-doc-id="${doc.id}">
+          <div class="doc-thumb" style="background-image:url('${doc.thumbnail}')"></div>
+          <div class="p-5">
+            <h3 class="text-white font-semibold text-base leading-snug">${doc.title}</h3>
+            <p class="text-sm text-sand/80 mt-2 leading-relaxed">${doc.description}</p>
+            <div class="mt-4">
+              ${locked
+                ? `<button class="btn btn-primary w-full justify-center" type="button" data-action="subscribe">Subscribe</button>`
+                : `<div class="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/30"><iframe src="${doc.embedUrl}" title="${doc.title}" class="player-iframe w-full h-full" loading="lazy" allowfullscreen></iframe></div>`}
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('[data-action="subscribe"]').forEach(btn => {
+      btn.addEventListener('click', () => smoothScrollTo('#pricing'));
+    });
+  }
+
+  function updateSubscriptionUI(){
+    const subscribed = getSubscribed();
+    const badge = document.getElementById('subscriptionBadge');
+    const badgeText = document.getElementById('subscriptionBadgeText');
+    const heroText = document.getElementById('heroSubText');
+    const heroCTA = document.getElementById('heroCTA');
+    const statusText = document.getElementById('statusText');
+    const statusSubText = document.getElementById('statusSubText');
+
+    if(badge){
+      badge.classList.remove('hidden');
+      if(badgeText) badgeText.textContent = subscribed ? 'Subscribed' : 'Free';
+    }
+
+    if(heroText) heroText.textContent = subscribed ? 'Subscribed' : 'Free';
+    if(heroCTA){ heroCTA.textContent = subscribed ? 'Watch now' : 'Subscribe'; }
+
+    if(statusText) statusText.textContent = subscribed ? 'Subscribed' : 'Free';
+    if(statusSubText) statusSubText.textContent = subscribed ? 'Ad-free documentaries unlocked. Enjoy full viewing.' : 'Pay to unlock ad-free documentaries.';
+
+    renderDocumentaries();
+  }
+
+  function initMoMoFlow(){
+    const payBtn = document.getElementById('momoPayBtn');
+    const instructions = document.getElementById('momoInstructions');
+    const form = document.getElementById('momoForm');
+    const status = document.getElementById('momoStatus');
+    const statusTitle = document.getElementById('momoStatusTitle');
+    const statusText = document.getElementById('momoStatusText');
+    const successBox = document.getElementById('momoSuccess');
+    const resetBtn = document.getElementById('resetSubBtn');
+
+    const subscribed = getSubscribed();
+    if(subscribed) instructions?.classList.add('hidden');
+
+    payBtn?.addEventListener('click', () => instructions?.classList.toggle('hidden'));
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const phone = document.getElementById('phone')?.value?.trim();
+      const txid = document.getElementById('txid')?.value?.trim();
+      if(!phone || !txid) return;
+
+      if(status){
+        status.classList.remove('hidden');
+        if(successBox) successBox.classList.add('hidden');
+        if(statusTitle) statusTitle.textContent = 'Processing payment…';
+        if(statusText) statusText.textContent = 'Verifying transaction details. Please wait.';
+      }
+
+      payBtn.disabled = true;
+      payBtn.textContent = 'Submitting…';
+
+      setTimeout(() => {
+        setSubscribed(true);
+        updateSubscriptionUI();
+        if(status){
+          if(statusTitle) statusTitle.textContent = 'Payment verified ✅';
+          if(statusText) statusText.textContent = 'Access unlocked. Enjoy ad-free documentaries.';
+        }
+        if(successBox) successBox.classList.remove('hidden');
+        if(payBtn){ payBtn.disabled = false; payBtn.textContent = 'Pay with MTN MoMo'; }
+      }, 1400);
+    });
+
+    resetBtn?.addEventListener('click', () => {
+      setSubscribed(false);
+      updateSubscriptionUI();
+      successBox?.classList.add('hidden');
+      status?.classList.add('hidden');
+      const phone = document.getElementById('phone');
+      const txid = document.getElementById('txid');
+      if(phone) phone.value='';
+      if(txid) txid.value='';
+    });
+  }
+
+  function init(){
+    document.getElementById('year').textContent = new Date().getFullYear();
+    updateSubscriptionUI();
+    initMoMoFlow();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
-
