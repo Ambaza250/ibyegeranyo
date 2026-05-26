@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Admin — Aime Christian</title>
+  <meta name="description" content="Aime Christian documentary admin upload panel" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./style.css" />
+
+  <meta name="robots" content="noindex" />
+</head>
+<body class="bg-black text-white selection:bg-red-700 selection:text-white">
+  <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(200,16,46,0.20),transparent_45%),radial-gradient(ellipse_at_bottom,rgba(15,23,42,0.75),transparent_55%)]"></div>
+  <div class="relative min-h-screen">
+
+    <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl border border-red-500/50 bg-gradient-to-br from-red-950/60 to-black flex items-center justify-center">
+            <span class="text-red-200 font-semibold">A</span>
+          </div>
+          <div>
+            <p class="font-semibold tracking-wide text-white">Aime Christian</p>
+            <p class="text-xs text-sand/70">Admin panel</p>
+          </div>
+        </div>
+
+        <a href="/" class="social">Back to site</a>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-2xl px-4 sm:px-6 py-10">
+      <div class="glass-card p-6 md:p-8">
+        <h1 class="hero-title text-white text-3xl mb-4">Documentary Upload</h1>
+        <p class="text-sm text-sand/70 mb-6">Upload a video and metadata. File will be renamed to match the title.</p>
+
+        <!-- Login form -->
+        <section id="loginSection">
+          <form id="loginForm" class="space-y-4">
+            <div>
+              <label class="text-xs text-sand/70" for="adminUser">Username</label>
+              <input id="adminUser" name="adminUser" class="input" placeholder="Username" autocomplete="username" required />
+            </div>
+
+            <div>
+              <label class="text-xs text-sand/70" for="adminPass">Password</label>
+              <input id="adminPass" name="adminPass" type="password" class="input" placeholder="campIO1!" autocomplete="current-password" required />
+
+              <p class="text-[11px] text-sand/60 mt-2">Enter your admin username and password.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full justify-center">Login</button>
+            <p id="loginError" class="hidden text-sm text-red-300">Invalid credentials.</p>
+          </form>
+        </section>
+
+        <!-- Upload form -->
+        <section id="uploadSection" class="hidden space-y-4">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs text-sand/70">Upload to</p>
+            <p class="text-sm font-semibold text-white">./documentaries/</p>
+          </div>
+
+          <form id="uploadForm" class="space-y-4">
+            <div>
+              <label class="text-xs text-sand/70" for="title">Title</label>
+              <input id="title" name="title" class="input" placeholder="e.g. My Documentary Title" required />
+            </div>
+
+            <div>
+              <label class="text-xs text-sand/70" for="summary">Summary</label>
+              <textarea id="summary" name="summary" rows="4" class="input" placeholder="Short description..." required></textarea>
+            </div>
+
+            <div>
+              <label class="text-xs text-sand/70" for="videoFile">Video file</label>
+              <input id="videoFile" name="videoFile" type="file" accept="video/*" class="input" required />
+              <p class="text-xs text-sand/60 mt-2">Saved as: sanitized title + original extension</p>
+            </div>
+
+            <button id="uploadBtn" type="submit" class="btn btn-primary w-full justify-center">
+              Upload documentary
+            </button>
+
+            <div id="uploadStatus" class="hidden mt-2" role="status" aria-live="polite"></div>
+
+            <div class="flex items-center justify-between gap-4">
+              <a id="refreshListBtn" href="#" class="social">Refresh list</a>
+            </div>
+          </form>
+
+          <div class="mt-6">
+            <h2 class="text-white font-semibold mb-3">Current documentaries</h2>
+            <div id="docList" class="space-y-3"></div>
+          </div>
+
+          <button id="logoutBtn" type="button" class="btn btn-ghost w-full justify-center">Logout</button>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="./admin.js"></script>
+</body>
+</html>
+
