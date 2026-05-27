@@ -23,6 +23,35 @@ const logoutBtn = document.getElementById('logoutBtn');
 const refreshListBtn = document.getElementById('refreshListBtn');
 const docList = document.getElementById('docList');
 
+const paymentList = document.getElementById('paymentList');
+const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
+
+function formatPaymentCard(p){
+  const amountRwf = Number(p.amount || 0);
+  const screenshot = p.screenshotUrl
+    ? `<a href="${p.screenshotUrl}" target="_blank" class="social">View proof</a>`
+    : '<span class="text-xs text-zinc-500">No screenshot</span>';
+
+  return `
+    <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-sm font-semibold text-white">${escapeHtml(p.fullName || '')}</p>
+          <p class="text-xs text-sand/80 mt-1">Phone: ${escapeHtml(p.phone || '')}</p>
+          <p class="text-xs text-sand/80 mt-1">Plan: ${escapeHtml(p.planType || '')} • ${amountRwf.toLocaleString()} RWF</p>
+          <p class="text-xs text-zinc-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}</p>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+          ${screenshot}
+          <button data-confirm-payment-id="${escapeHtml(p.id)}" class="btn btn-primary-sm confirmPaymentBtn" type="button">Confirm</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+
 function setHidden(el, hidden){
   if(!el) return;
   if(hidden) el.classList.add('hidden');
@@ -87,6 +116,68 @@ function escapeHtml(str){
   }[c]));
 }
 
+async function loadPayments(){
+  if(!paymentList) return;
+  paymentList.innerHTML = '';
+
+  const pending = [];
+
+
+  const data = await apiFetch('/api/payments');
+  const pending = Array.isArray(data) ? data.filter(p => p.status === 'pending') : [];
+
+  if(pending.length === 0){
+    paymentList.innerHTML = `<p class="text-sm text-zinc-500">No pending payments.</p>`;
+    return;
+  }
+
+  paymentList.innerHTML = pending.map(p => {
+    const amountRwf = Number(p.amount || 0);
+    const screenshot = p.screenshotUrl
+      ? `<a href="${p.screenshotUrl}" target="_blank" class="social">View proof</a>`
+      : '<span class="text-xs text-zinc-500">No screenshot</span>';
+
+    return `
+      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-white">${escapeHtml(p.fullName || '')}</p>
+            <p class="text-xs text-sand/80 mt-1">Phone: ${escapeHtml(p.phone || '')}</p>
+            <p class="text-xs text-sand/80 mt-1">Plan: ${escapeHtml(p.planType || '')} • ${amountRwf.toLocaleString()} RWF</p>
+            <p class="text-xs text-zinc-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}</p>
+          </div>
+          <div class="flex flex-col items-end gap-2">
+            ${screenshot}
+            <button data-confirm-payment-id="${escapeHtml(p.id)}" class="btn btn-primary-sm confirmPaymentBtn" type="button">Confirm</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  paymentList.querySelectorAll('.confirmPaymentBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-confirm-payment-id');
+      if(!id) return;
+
+      try{
+        await apiFetch('/api/payments/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId: id })
+        });
+      }catch(err){
+        console.error(err);
+        showStatus(err.message || 'Confirm failed', 'error');
+        return;
+      }
+
+      showStatus('Payment confirmed ✅', 'ok');
+      await loadPayments();
+    });
+  });
+}
+
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   loginError?.classList.add('hidden');
@@ -95,17 +186,16 @@ loginForm?.addEventListener('submit', async (e) => {
     const username = USERNAME_INPUT?.value?.trim();
     const password = PASSWORD_INPUT?.value ?? '';
 
-
     const data = await apiFetch('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
 
-    // data.ok
     setHidden(loginSection, true);
     setHidden(uploadSection, false);
     await loadDocList();
+    await loadPayments();
     showStatus('Admin login successful ✅', 'ok');
   }catch(err){
     console.error(err);
@@ -116,6 +206,12 @@ loginForm?.addEventListener('submit', async (e) => {
     showStatus('Login failed.', 'error');
   }
 });
+
+refreshPaymentsBtn?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  try{ await loadPayments(); }catch(err){ showStatus(err.message || 'Failed to refresh payments.', 'error'); }
+});
+
 
 uploadForm?.addEventListener('submit', async (e) => {
   e.preventDefault();

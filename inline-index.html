@@ -492,6 +492,8 @@
 
   function init(){
     document.getElementById('year').textContent = new Date().getFullYear();
+    // Keep locked view (inline page uses same UI IDs as index.html, but we ship the updated index.html on production).
+    // For now, inline version remains demo-only.
     updateSubscriptionUI();
     initMoMoFlow();
   }
@@ -500,4 +502,5 @@
   </script>
 </body>
 </html>
+
 
