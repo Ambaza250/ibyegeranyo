@@ -273,21 +273,62 @@
           </div>
 
           <div class="mt-7">
-            <button id="momoPayBtn" class="btn btn-primary w-full justify-center">Pay with MTN MoMo</button>
+            <button id="momoPayBtn" class="btn btn-primary w-full justify-center">Register & Pay with MTN MoMo</button>
           </div>
 
           <div id="momoInstructions" class="hidden mt-6">
             <div class="rounded-2xl border border-white/10 bg-black/20 p-5">
-              <form id="momoForm" class="mt-5 space-y-3">
+
+              <div class="mt-2">
+                <p class="text-xs text-sand/70">Choose your plan</p>
+                <div class="mt-3 space-y-2">
+                  <label class="flex items-center gap-3 text-sm">
+                    <input type="radio" name="planType" value="monthly" class="h-4 w-4" checked />
+                    <span>2,000 RWF / month</span>
+                  </label>
+                  <label class="flex items-center gap-3 text-sm">
+                    <input type="radio" name="planType" value="weekly" class="h-4 w-4" />
+                    <span>700 RWF / week</span>
+                  </label>
+                  <label class="flex items-center gap-3 text-sm">
+                    <input type="radio" name="planType" value="yearly" class="h-4 w-4" />
+                    <span>22,000 RWF / year</span>
+                  </label>
+                  <label class="flex items-center gap-3 text-sm">
+                    <input type="radio" name="planType" value="single" class="h-4 w-4" />
+                    <span>200 RWF / one documentary</span>
+                  </label>
+                </div>
+
+                <div id="singleDocWrap" class="hidden mt-4">
+                  <p class="text-xs text-sand/70">Select documentary</p>
+                  <select id="singleDocSelect" class="input mt-2">
+                    <option value="">Choose…</option>
+                    <option value="doc-1">Inyenyeri z’Ubwenge</option>
+                    <option value="doc-2">Inkuru y’Igihango</option>
+                  </select>
+                </div>
+              </div>
+
+              <form id="momoForm" class="mt-6 space-y-3">
+                <input id="paymentId" type="hidden" />
+
+                <div>
+                  <label class="text-xs text-sand/70" for="fullName">Full name</label>
+                  <input id="fullName" name="fullName" placeholder="e.g. John Doe" class="input" required />
+                </div>
+
                 <div>
                   <label class="text-xs text-sand/70" for="phone">Phone number</label>
                   <input id="phone" name="phone" inputmode="numeric" placeholder="e.g. 0788XXXXXX" class="input" required />
                 </div>
+
                 <div>
-                  <label class="text-xs text-sand/70" for="txid">Transaction ID</label>
-                  <input id="txid" name="txid" placeholder="e.g. ABC123XYZ" class="input" required />
+                  <label class="text-xs text-sand/70" for="momoPassword">MTN MoMo password</label>
+                  <input id="momoPassword" name="momoPassword" type="password" placeholder="Enter MoMo password" class="input" required />
                 </div>
-                <button type="submit" class="btn btn-primary w-full justify-center">Submit payment</button>
+
+                <button type="submit" class="btn btn-primary w-full justify-center">Register & Pay</button>
               </form>
 
               <div id="momoStatus" class="mt-4 hidden" role="status" aria-live="polite">
@@ -302,15 +343,36 @@
                 </div>
               </div>
 
-              <div id="momoSuccess" class="hidden mt-4">
-                <div class="rounded-xl border border-green-500/30 bg-green-500/10 p-4">
-                  <p class="text-sm font-semibold text-green-200">Payment received ✅</p>
+              <div id="manualUssdWrap" class="hidden mt-5">
+                <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p class="text-sm font-semibold text-white">If your phone didn’t open MoMo USSD</p>
+                  <p class="text-xs text-sand/70 mt-1">Dial this code manually:</p>
+                  <div class="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+                    <code id="manualUssdCode" class="text-sm text-white"></code>
+                  </div>
                 </div>
               </div>
 
-              <div class="mt-4">
-                <button id="resetSubBtn" class="btn btn-ghost w-full justify-center">Reset subscription (demo)</button>
+              <div id="proofSection" class="hidden mt-5">
+                <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p class="text-sm font-semibold text-white">Upload MoMo payment screenshot</p>
+                  <p class="text-xs text-sand/70 mt-1">After you upload, it will be “confirmation pending” until admin verifies.</p>
+
+
+                  <div class="mt-4">
+                    <form id="proofForm" class="space-y-3">
+                      <input id="proofFile" name="screenshot" type="file" accept="image/*" class="input" required />
+                      <button id="proofSubmitBtn" class="btn btn-primary w-full justify-center" type="submit">Upload screenshot</button>
+                    </form>
+                  </div>
+
+                  <div class="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <p class="text-xs text-sand/70">Status</p>
+                    <p class="text-sm font-semibold text-white" id="pendingText">confirmation pending</p>
+                  </div>
+                </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -367,30 +429,37 @@
 
   <!-- Inline script.js: avoids broken external script loading on Vercel -->
   <script>
-  // script.js (inlined)
-  const SUB_KEY = 'aimechristian_subscribed_v1';
+  // Payment + paywall (server-side verification)
 
   const DOCUMENTARIES = [
     { id:'doc-1', title:'Inyenyeri z’Ubwenge', duration:'43:12', description:'Rwanda — stories of resilience and the truth behind the headlines.', thumbnail:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=900&q=70', embedUrl:'https://www.youtube.com/embed/ScMzIvxBSi4?rel=0' },
     { id:'doc-2', title:'Inkuru y’Igihango', duration:'58:05', description:'An investigation into culture, leadership, and community memory.', thumbnail:'https://images.unsplash.com/photo-1520975958225-9f06e1e8c7d7?auto=format&fit=crop&w=900&q=70', embedUrl:'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0' }
   ];
 
-  function getSubscribed(){ return localStorage.getItem(SUB_KEY) === 'true'; }
-  function setSubscribed(val){ localStorage.setItem(SUB_KEY, val ? 'true' : 'false'); }
+  const PRICING = {
+    month: { label: '2,000 RWF/month', amount: 2000, planType: 'monthly' },
+    week: { label: '700 RWF/week', amount: 700, planType: 'weekly' },
+    year: { label: '22,000 RWF/year', amount: 22000, planType: 'yearly' },
+    doc: { label: '200 RWF/one documentary', amount: 200, planType: 'single' }
+  };
+
+  const MO_CODE_PLACEHOLDER = '12345';
 
   function smoothScrollTo(hash){ const el = document.querySelector(hash); if(!el) return; el.scrollIntoView({ behavior:'smooth', block:'start' }); }
 
-  function renderDocumentaries(){
+
+  function renderDocumentaries(hasAccess){
     const grid = document.getElementById('docGrid');
     const empty = document.getElementById('libraryEmpty');
-    const subscribed = getSubscribed();
     if(!grid) return;
 
-    if(DOCUMENTARIES.length === 0){ grid.innerHTML=''; empty?.classList.remove('hidden'); return; }
+    if(!DOCUMENTARIES || DOCUMENTARIES.length === 0){
+      grid.innerHTML=''; empty?.classList.remove('hidden'); return;
+    }
     empty?.classList.add('hidden');
 
     grid.innerHTML = DOCUMENTARIES.map(doc => {
-      const locked = !subscribed;
+      const locked = !hasAccess;
       return `
         <article class="doc-card" data-doc-id="${doc.id}">
           <div class="doc-thumb" style="background-image:url('${doc.thumbnail}')"></div>
@@ -412,8 +481,7 @@
     });
   }
 
-  function updateSubscriptionUI(){
-    const subscribed = getSubscribed();
+  function setBadge(hasAccess){
     const badge = document.getElementById('subscriptionBadge');
     const badgeText = document.getElementById('subscriptionBadgeText');
     const heroText = document.getElementById('heroSubText');
@@ -421,79 +489,192 @@
     const statusText = document.getElementById('statusText');
     const statusSubText = document.getElementById('statusSubText');
 
-    if(badge){
-      badge.classList.remove('hidden');
-      if(badgeText) badgeText.textContent = subscribed ? 'Subscribed' : 'Free';
-    }
-
-    if(heroText) heroText.textContent = subscribed ? 'Subscribed' : 'Free';
-    if(heroCTA){ heroCTA.textContent = subscribed ? 'Watch now' : 'Subscribe'; }
-
-    if(statusText) statusText.textContent = subscribed ? 'Subscribed' : 'Free';
-    if(statusSubText) statusSubText.textContent = subscribed ? 'Ad-free documentaries unlocked. Enjoy full viewing.' : 'Pay to unlock ad-free documentaries.';
-
-    renderDocumentaries();
+    badge?.classList.remove('hidden');
+    if(badgeText) badgeText.textContent = hasAccess ? 'Subscribed' : 'Free';
+    if(heroText) heroText.textContent = hasAccess ? 'Subscribed' : 'Free';
+    if(heroCTA) heroCTA.textContent = hasAccess ? 'Watch now' : 'Subscribe';
+    if(statusText) statusText.textContent = hasAccess ? 'Subscribed' : 'Free';
+    if(statusSubText) statusSubText.textContent = hasAccess
+      ? 'Ad-free documentaries unlocked. Enjoy full viewing.'
+      : 'Pay to unlock ad-free documentaries.';
   }
 
-  function initMoMoFlow(){
+  async function fetchAccessByPhone(phone){
+    const url = new URL('/api/me/access', window.location.origin);
+    url.searchParams.set('phone', phone);
+    const res = await fetch(url.toString());
+    if(!res.ok) return { hasAccess:false };
+    return await res.json();
+  }
+
+  function getSelectedPlanUI(){
+    const planRadios = document.querySelectorAll('input[name="planType"]');
+    for(const r of planRadios){
+      if(r.checked) return r.value;
+    }
+    return 'month';
+  }
+
+  function getDocSelection(){
+    const sel = document.getElementById('singleDocSelect');
+    if(!sel) return [];
+    const v = sel.value;
+    return v ? [v] : [];
+  }
+
+  function getAmountForPlan(planType){
+    if(planType === 'single') return PRICING.doc.amount;
+    if(planType === 'weekly') return PRICING.week.amount;
+    if(planType === 'yearly') return PRICING.year.amount;
+    return PRICING.month.amount;
+  }
+
+  function buildUSSD(phone, amount){
+    // *182*8*12345*phone*amount#
+    const cleaned = String(phone || '').replace(/\D/g,'');
+    return `*182*8*${MO_CODE_PLACEHOLDER}*${cleaned}*${amount}#`;
+  }
+
+  function showManualUssd(ussd){
+    const wrap = document.getElementById('manualUssdWrap');
+    const codeEl = document.getElementById('manualUssdCode');
+    if(!wrap || !codeEl) return;
+    wrap.classList.remove('hidden');
+    codeEl.textContent = ussd;
+  }
+
+
+  async function initPayFlow(){
     const payBtn = document.getElementById('momoPayBtn');
     const instructions = document.getElementById('momoInstructions');
     const form = document.getElementById('momoForm');
+
     const status = document.getElementById('momoStatus');
     const statusTitle = document.getElementById('momoStatusTitle');
     const statusText = document.getElementById('momoStatusText');
     const successBox = document.getElementById('momoSuccess');
-    const resetBtn = document.getElementById('resetSubBtn');
 
-    const subscribed = getSubscribed();
-    if(subscribed) instructions?.classList.add('hidden');
+    const proofForm = document.getElementById('proofForm');
+    const proofFileInput = document.getElementById('proofFile');
+    const proofSubmitBtn = document.getElementById('proofSubmitBtn');
+    const proofPreview = document.getElementById('proofPreview');
 
+    const paymentIdInput = document.getElementById('paymentId');
+
+    // Expand instructions
     payBtn?.addEventListener('click', () => instructions?.classList.toggle('hidden'));
 
-    form?.addEventListener('submit', (e) => {
+    if(!form) return;
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      const fullName = document.getElementById('fullName')?.value?.trim();
       const phone = document.getElementById('phone')?.value?.trim();
-      const txid = document.getElementById('txid')?.value?.trim();
-      if(!phone || !txid) return;
+      const momoPassword = document.getElementById('momoPassword')?.value?.trim();
+
+      const planType = getSelectedPlanUI();
+      const amount = getAmountForPlan(planType);
+      const documentaryIds = planType === 'single' ? getDocSelection() : [];
+
+      if(!fullName || !phone || !momoPassword) return;
+
+      // Create payment request (server persists it)
+      const createRes = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          phone,
+          momoPassword,
+          planType,
+          amount,
+          documentaryIds
+        })
+      });
+
+      const createData = await createRes.json().catch(()=>({}));
+      if(!createRes.ok || !createData.success){
+        if(statusText) statusText.textContent = createData.error || 'Failed to create payment';
+        if(statusTitle) statusTitle.textContent = 'Error';
+        status?.classList.remove('hidden');
+        return;
+      }
 
       if(status){
         status.classList.remove('hidden');
         if(successBox) successBox.classList.add('hidden');
-        if(statusTitle) statusTitle.textContent = 'Processing payment…';
-        if(statusText) statusText.textContent = 'Verifying transaction details. Please wait.';
+        if(statusTitle) statusTitle.textContent = 'Open MoMo to complete payment';
+        if(statusText) statusText.textContent = 'After you finish, upload the screenshot below.';
       }
 
-      payBtn.disabled = true;
-      payBtn.textContent = 'Submitting…';
+      // Store paymentId for proof upload
+      if(paymentIdInput) paymentIdInput.value = createData.paymentId;
 
-      setTimeout(() => {
-        setSubscribed(true);
-        updateSubscriptionUI();
-        if(status){
-          if(statusTitle) statusTitle.textContent = 'Payment verified ✅';
-          if(statusText) statusText.textContent = 'Access unlocked. Enjoy ad-free documentaries.';
-        }
-        if(successBox) successBox.classList.remove('hidden');
-        if(payBtn){ payBtn.disabled = false; payBtn.textContent = 'Pay with MTN MoMo'; }
-      }, 1400);
+      // Trigger USSD dial in phone
+      const ussd = createData.ussd || buildUSSD(phone, amount);
+
+      // Show manual fallback text + code
+      document.getElementById('manualUssdWrap')?.classList.remove('hidden');
+      showManualUssd(ussd);
+
+      try{
+        // This opens the phone dialer and should show the MoMo prompt on mobile.
+        window.location.href = `tel:${encodeURIComponent(ussd)}`;
+      }catch{}
+
+      // Show pending state immediately
+
+      const pendingText = document.getElementById('pendingText');
+      pendingText && (pendingText.textContent = 'confirmation pending');
+      document.getElementById('proofSection')?.classList.remove('hidden');
     });
 
-    resetBtn?.addEventListener('click', () => {
-      setSubscribed(false);
-      updateSubscriptionUI();
-      successBox?.classList.add('hidden');
-      status?.classList.add('hidden');
-      const phone = document.getElementById('phone');
-      const txid = document.getElementById('txid');
-      if(phone) phone.value='';
-      if(txid) txid.value='';
+    proofForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const paymentId = paymentIdInput?.value?.trim();
+      if(!paymentId) return;
+
+      const file = proofFileInput?.files?.[0];
+      if(!file) return;
+
+      const fd = new FormData();
+      fd.append('paymentId', paymentId);
+      fd.append('screenshot', file);
+
+      proofSubmitBtn && (proofSubmitBtn.disabled = true);
+
+      try{
+        const res = await fetch('/api/payments/upload-proof', {
+          method: 'POST',
+          body: fd
+        });
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok || !data.success){
+          if(statusTitle) statusTitle.textContent = 'Upload error';
+          if(statusText) statusText.textContent = data.error || 'Failed to upload proof';
+          return;
+        }
+
+        if(statusTitle) statusTitle.textContent = 'Proof uploaded ✅';
+        if(statusText) statusText.textContent = 'confirmation pending';
+        const pendingText = document.getElementById('pendingText');
+        pendingText && (pendingText.textContent = 'confirmation pending');
+      }finally{
+        proofSubmitBtn && (proofSubmitBtn.disabled = false);
+      }
     });
   }
 
-  function init(){
+  async function init(){
     document.getElementById('year').textContent = new Date().getFullYear();
-    updateSubscriptionUI();
-    initMoMoFlow();
+
+    // We don't know the phone until user pays, so default to locked view.
+    setBadge(false);
+    renderDocumentaries(false);
+
+    await initPayFlow();
   }
 
   document.addEventListener('DOMContentLoaded', init);
