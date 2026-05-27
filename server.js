@@ -16,7 +16,7 @@ app.use(express.static(path.resolve(process.cwd())));
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
+  limits: { fileSize: 500 * 1024 * 1024 }
 });
 
 // Configure Cloudinary
@@ -25,6 +25,10 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// Use /tmp for data storage (Vercel compatible)
+const DATA_DIR = '/tmp/documentaries';
+const DATA_PATH = path.join(DATA_DIR, 'data.json');
 
 // Routes
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
@@ -50,7 +54,7 @@ app.get('/api/admin/check', (req, res) => {
   res.json({ isLoggedIn: req.cookies.admin === 'true' });
 });
 
-// ===================== UPLOAD TO CLOUDINARY =====================
+// Upload Endpoint
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
   try {
     const isAdmin = req.cookies.admin === 'true';
@@ -113,8 +117,8 @@ app.get('/api/documentaries', async (req, res) => {
 });
 
 async function readDocumentaries() {
-  const DATA_PATH = path.join(process.cwd(), 'documentaries', 'data.json');
   try {
+    await fsp.mkdir(DATA_DIR, { recursive: true });
     const raw = await fsp.readFile(DATA_PATH, 'utf8');
     return JSON.parse(raw);
   } catch {
@@ -123,13 +127,15 @@ async function readDocumentaries() {
 }
 
 async function saveDocumentary(newDoc) {
-  const DATA_DIR = path.join(process.cwd(), 'documentaries');
-  const DATA_PATH = path.join(DATA_DIR, 'data.json');
-  
-  await fsp.mkdir(DATA_DIR, { recursive: true });
-  const docs = await readDocumentaries();
-  docs.unshift(newDoc);
-  await fsp.writeFile(DATA_PATH, JSON.stringify(docs, null, 2));
+  try {
+    await fsp.mkdir(DATA_DIR, { recursive: true });
+    const docs = await readDocumentaries();
+    docs.unshift(newDoc);
+    await fsp.writeFile(DATA_PATH, JSON.stringify(docs, null, 2));
+  } catch (err) {
+    console.error("Save Error:", err);
+    throw err;
+  }
 }
 
 app.listen(APP_PORT, () => {
