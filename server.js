@@ -1,5 +1,5 @@
 /**
- * server.js - Updated with Vercel Blob
+ * server.js - Fixed Root Route + Vercel Blob
  */
 
 import express from 'express';
@@ -17,9 +17,16 @@ const ADMIN_PASS = 'campIO1!';
 const app = express();
 app.use(express.json({ limit: '100mb' }));
 app.use(cookieParser());
+
+// Serve static files (HTML, CSS, JS, etc.)
 app.use(express.static(path.resolve(process.cwd())));
 
-// Serve admin.html
+// === EXPLICIT ROOT ROUTE (This fixes "Cannot GET /") ===
+app.get('/', (req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'index.html'));
+});
+
+// Admin page
 app.get('/admin', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'admin.html'));
 });
@@ -53,33 +60,30 @@ app.post('/api/upload-documentary', async (req, res) => {
   if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const { filename, contentType, size } = req.body;
+    const { filename, contentType } = req.body;
 
     if (!filename || !contentType) {
       return res.status(400).json({ error: 'Missing file info' });
     }
 
-    // Generate temporary token for client upload
     const { url } = await put(filename, '', {
       access: 'public',
       contentType: contentType,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    // Save metadata
     const metadata = {
       id: Date.now().toString(),
-      title: filename.replace(/\.\w+$/, ''),
+      title: filename.replace(/\.\w+$/, '').replace(/[-_]/g, ' '),
       url: url,
       uploadedAt: new Date().toISOString(),
-      size: size || 0
     };
 
     await saveDocumentary(metadata);
 
     res.json({ success: true, url, metadata });
   } catch (error) {
-    console.error(error);
+    console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -97,7 +101,7 @@ app.get('/api/documentaries', async (req, res) => {
 async function readDocumentaries() {
   const DATA_PATH = path.join(process.cwd(), 'documentaries', 'data.json');
   try {
-    const raw = await fsp.readFile(DATA_PATH, 'utf8').catch(() => '[]');
+    const raw = await fsp.readFile(DATA_PATH, 'utf8');
     return JSON.parse(raw);
   } catch {
     return [];
@@ -111,11 +115,10 @@ async function saveDocumentary(newDoc) {
   await fsp.mkdir(DATA_DIR, { recursive: true });
   
   const docs = await readDocumentaries();
-  docs.unshift(newDoc); // newest first
-  
+  docs.unshift(newDoc);
   await fsp.writeFile(DATA_PATH, JSON.stringify(docs, null, 2));
 }
 
 app.listen(APP_PORT, () => {
-  console.log(`Server running on http://localhost:${APP_PORT}`);
+  console.log(`🚀 Server running on http://localhost:${APP_PORT}`);
 });
