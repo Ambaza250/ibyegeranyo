@@ -3,9 +3,9 @@ import path from 'path';
 import fsp from 'fs/promises';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
-import { put } from '@vercel/blob';
+import { v2 as cloudinary } from 'cloudinary';
 
-const APP_PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+const APP_PORT = process.env.PORT || 3000;
 
 const ADMIN_USER = 'aime';
 const ADMIN_PASS = 'campIO1!';
@@ -16,14 +16,21 @@ app.use(express.static(path.resolve(process.cwd())));
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB
+  limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
+});
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // Routes
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.resolve(process.cwd(), 'admin.html')));
 
-// Auth Routes
+// Admin Auth
 app.post('/api/admin/login', express.json(), (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -43,70 +50,56 @@ app.get('/api/admin/check', (req, res) => {
   res.json({ isLoggedIn: req.cookies.admin === 'true' });
 });
 
-// ===================== UPLOAD ENDPOINT =====================
+// ===================== UPLOAD TO CLOUDINARY =====================
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
-  console.log("=== Upload Request Received ===");
-  console.log("Body:", req.body);
-  console.log("File:", req.file ? "File received" : "No file");
-
   try {
     const isAdmin = req.cookies.admin === 'true';
-    if (!isAdmin) {
-      console.log("❌ Unauthorized");
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
 
     const { title, summary } = req.body;
     const file = req.file;
 
     if (!title || !file) {
-      console.log("❌ Missing title or file");
       return res.status(400).json({ error: 'Title and video file are required' });
     }
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.log("❌ BLOB_READ_WRITE_TOKEN is missing!");
-      return res.status(500).json({ error: 'Blob token not configured' });
-    }
-
-    // Sanitize title
     const sanitizedTitle = title
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-');
 
-    const extension = file.originalname.split('.').pop() || 'mp4';
-    const blobName = `${sanitizedTitle}.${extension}`;
-
-    console.log(`Uploading as: ${blobName}`);
-
-    // Upload to Vercel Blob
-    const { url } = await put(blobName, file.buffer, {
-      access: 'public',
-      contentType: file.mimetype,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: "video",
+          public_id: sanitizedTitle,
+          folder: "aime-christian-documentaries",
+          overwrite: true
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(file.buffer);
     });
-
-    console.log("✅ Uploaded successfully:", url);
 
     const metadata = {
       id: Date.now().toString(),
       title: title,
       summary: summary || '',
-      url: url,
+      url: result.secure_url,
       uploadedAt: new Date().toISOString()
     };
 
     await saveDocumentary(metadata);
 
-    res.json({ success: true, url });
+    res.json({ success: true, url: result.secure_url });
+
   } catch (error) {
-    console.error("🔥 Upload Error:", error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error',
-      details: error.toString()
-    });
+    console.error("Upload Error:", error);
+    res.status(500).json({ error: error.message || 'Upload failed' });
   }
 });
 
