@@ -16,14 +16,14 @@ app.use(express.static(path.resolve(process.cwd())));
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
+  limits: { fileSize: 500 * 1024 * 1024 } // 500MB
 });
 
 // Routes
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.resolve(process.cwd(), 'admin.html')));
 
-// Auth
+// Auth Routes
 app.post('/api/admin/login', express.json(), (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -43,11 +43,16 @@ app.get('/api/admin/check', (req, res) => {
   res.json({ isLoggedIn: req.cookies.admin === 'true' });
 });
 
-// === MAIN UPLOAD ===
+// ===================== UPLOAD ENDPOINT =====================
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
+  console.log("=== Upload Request Received ===");
+  console.log("Body:", req.body);
+  console.log("File:", req.file ? "File received" : "No file");
+
   try {
     const isAdmin = req.cookies.admin === 'true';
     if (!isAdmin) {
+      console.log("❌ Unauthorized");
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -55,7 +60,13 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
     const file = req.file;
 
     if (!title || !file) {
+      console.log("❌ Missing title or file");
       return res.status(400).json({ error: 'Title and video file are required' });
+    }
+
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.log("❌ BLOB_READ_WRITE_TOKEN is missing!");
+      return res.status(500).json({ error: 'Blob token not configured' });
     }
 
     // Sanitize title
@@ -68,12 +79,16 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
     const extension = file.originalname.split('.').pop() || 'mp4';
     const blobName = `${sanitizedTitle}.${extension}`;
 
+    console.log(`Uploading as: ${blobName}`);
+
     // Upload to Vercel Blob
     const { url } = await put(blobName, file.buffer, {
       access: 'public',
       contentType: file.mimetype,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
+
+    console.log("✅ Uploaded successfully:", url);
 
     const metadata = {
       id: Date.now().toString(),
@@ -87,8 +102,11 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
 
     res.json({ success: true, url });
   } catch (error) {
-    console.error('Upload Error:', error);
-    res.status(500).json({ error: error.message || 'Upload failed' });
+    console.error("🔥 Upload Error:", error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: error.toString()
+    });
   }
 });
 
