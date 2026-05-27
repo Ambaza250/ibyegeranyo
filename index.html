@@ -347,13 +347,20 @@
 
               <div id="manualUssdWrap" class="hidden mt-5">
                 <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <p class="text-sm font-semibold text-white">If your phone didn’t open MoMo USSD</p>
-                  <p class="text-xs text-sand/70 mt-1">Dial this code manually:</p>
+                  <p class="text-sm font-semibold text-white">Manual method (PIN entry)</p>
+                  <p class="text-xs text-sand/70 mt-1">
+                    Use this if the automatic step doesn’t reach the PIN prompt.
+                    The PIN step happens when MTN prompts you.
+                  </p>
                   <div class="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
                     <code id="manualUssdCode" class="text-sm text-white"></code>
                   </div>
+                  <p class="text-[11px] text-sand/60 mt-2">
+                    Manual method format: *182*8*1*12345*{amount}#
+                  </p>
                 </div>
               </div>
+
 
       <div id="proofSection" class="hidden mt-5">
                 <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -533,10 +540,18 @@
   }
 
   function buildUSSD(phone, amount){
-    // *182*8*12345*phone*amount#
+    // Best-effort automatic dial attempt (current backend pattern)
     const cleaned = String(phone || '').replace(/\D/g,'');
     return `*182*8*${MO_CODE_PLACEHOLDER}*${cleaned}*${amount}#`;
   }
+
+  function buildManualUssd(amount){
+    // Manual method requested by user:
+    // *182*8*1*12345*{amount}#
+    const amt = String(amount ?? '').replace(/\D/g,'');
+    return `*182*8*1*${MO_CODE_PLACEHOLDER}*${amt}#`;
+  }
+
 
   function showManualUssd(ussd){
     const wrap = document.getElementById('manualUssdWrap');
@@ -614,22 +629,28 @@
       // Store paymentId for proof upload
       if(paymentIdInput) paymentIdInput.value = createData.paymentId;
 
-      // Trigger USSD dial in phone
+      // Trigger USSD dial in phone (best-effort)
       const ussd = createData.ussd || buildUSSD(phone, amount);
 
-      // Show manual fallback text + code
-      document.getElementById('manualUssdWrap')?.classList.remove('hidden');
-      showManualUssd(ussd);
+      // Manual method requested by user (PIN entry happens when MTN prompts)
+      const manualUssd = buildManualUssd(amount);
 
+      // Always show manual method code
+      document.getElementById('manualUssdWrap')?.classList.remove('hidden');
+      showManualUssd(manualUssd);
+
+      // Dialer attempt: best-effort (some devices may not open MoMo USSD automatically)
       try{
-        // This opens the phone dialer and should show the MoMo prompt on mobile.
         window.location.href = `tel:${encodeURIComponent(ussd)}`;
       }catch{}
 
-      // Show pending state immediately
+      // Show pending state + screenshot upload section
       const pendingText = document.getElementById('pendingText');
       pendingText && (pendingText.textContent = 'confirmation pending');
       document.getElementById('proofSection')?.classList.remove('hidden');
+
+      // Make sure the manual USSD block is visible too
+      document.getElementById('manualUssdWrap')?.classList.remove('hidden');
 
       // Periodically check access for the same phone (unlock after admin confirms)
       try {
@@ -656,6 +677,7 @@
           if (done || attempts >= 15) clearInterval(interval);
         }, 10000);
       } catch {}
+
     });
 
     proofForm?.addEventListener('submit', async (e) => {
