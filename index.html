@@ -3,25 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- SEO -->
-  <title>Aime Christian Documentaries — Ad-Free Premium Subscription (2,000 RWF/month)</title>
-  <meta name="description" content="Watch Aime Christian Rwandan documentaries ad-free for 2,000 RWF/month. Premium, uncut stories and investigations — no YouTube ads." />
-  <meta name="robots" content="index,follow" />
-  <link rel="canonical" href="/" />
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Watch Aime Christian Documentaries Ad-Free" />
-  <meta property="og:description" content="Premium access to uncut, advertisement-free Rwandan stories and investigations — 2,000 RWF/month." />
-  <meta property="og:type" content="website" />
-
-  <!-- Tailwind (CDN) -->
+  <title>Aime Christian Documentaries</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Cinematic fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet" />
+
 
   <!-- Inline styles: avoids broken external style loading on Vercel -->
   <style>
@@ -79,7 +64,19 @@
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
   </style>
 </head>
-<body class="bg-black text-white selection:bg-red-700 selection:text-white">
+<body class="bg-black text-white min-h-screen pb-20">
+  <!-- Login Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center z-50">
+    <div class="glass-card p-8 w-full max-w-md mx-4">
+      <h2 class="text-3xl font-bold mb-6 text-center">Murakaza neza</h2>
+      <form id="loginForm">
+        <input type="tel" id="phone" placeholder="Phone number (e.g. 0781234567)" class="input mb-4" required />
+        <input type="password" id="password" placeholder="Password" class="input mb-6" required />
+        <button type="submit" class="btn-primary w-full py-4 text-lg">Login</button>
+      </form>
+      <p id="loginMessage" class="text-center mt-4 text-sm"></p>
+    </div>
+  </div>
   <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(200,16,46,0.20),transparent_45%),radial-gradient(ellipse_at_bottom,rgba(15,23,42,0.75),transparent_55%)]"></div>
   <div class="fixed inset-0 pointer-events-none opacity-35 mix-blend-overlay" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27120%27 height=%27120%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter=%27url(%23n)%27 opacity=%270.35%27/%3E%3C/svg%3E');"></div>
   <div class="relative">
