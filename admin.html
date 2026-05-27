@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — Aime Christian</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@vercel/blob/client"></script>
   <meta name="robots" content="noindex" />
   
   <style>
@@ -80,7 +79,10 @@
     </div>
   </div>
 
-  <script>
+  <!-- Vercel Blob Client -->
+  <script src="https://unpkg.com/@vercel/blob@0.27.0/client.js"></script>
+  <script >
+
     // admin.js
 const loginSection = document.getElementById('loginSection');
 const uploadSection = document.getElementById('uploadSection');
@@ -155,27 +157,29 @@ uploadForm.addEventListener('submit', async (e) => {
 
   uploadBtn.disabled = true;
   progressContainer.classList.remove('hidden');
+  progressBar.style.width = '0%';
+  progressText.textContent = '0%';
 
   try {
+    // Use the global upload function from Vercel Blob
     const newBlob = await upload(file.name, file, {
       access: 'public',
       handleUploadUrl: '/api/upload-documentary',
       onUploadProgress: (progress) => {
-        const percent = Math.round(progress * 100);
+        const percent = Math.round((progress.loaded / progress.total) * 100);
         progressBar.style.width = percent + '%';
         progressText.textContent = percent + '%';
       }
     });
 
-    // Send metadata to backend
+    // Save metadata
     const res = await fetch('/api/save-documentary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: title,
         summary: summary,
-        videoUrl: newBlob.url,
-        filename: file.name
+        videoUrl: newBlob.url
       })
     });
 
@@ -183,12 +187,11 @@ uploadForm.addEventListener('submit', async (e) => {
 
     if (data.success) {
       alert('✅ Documentary uploaded successfully!');
-      // Reset form
       uploadForm.reset();
       progressContainer.classList.add('hidden');
       loadDocList();
     } else {
-      alert('Failed to save metadata');
+      alert('Metadata save failed');
     }
   } catch (error) {
     console.error(error);
@@ -208,7 +211,7 @@ async function loadDocList() {
       : docs.map(doc => `
         <div class="glass-card p-5">
           <h3 class="font-semibold text-lg">${doc.title}</h3>
-          <p class="text-sm text-zinc-400 mt-1">${doc.summary || 'No summary provided.'}</p>
+          <p class="text-sm text-zinc-400 mt-1 line-clamp-3">${doc.summary || 'No summary provided.'}</p>
           <div class="mt-3 flex justify-between items-center">
             <span class="text-xs text-zinc-500">${new Date(doc.uploadedAt).toLocaleDateString()}</span>
             <a href="${doc.url}" target="_blank" class="text-red-500 hover:underline font-medium">Watch Video →</a>
