@@ -273,7 +273,7 @@
           </div>
 
           <div class="mt-7">
-            <button id="momoPayBtn" class="btn btn-primary w-full justify-center">Register & Pay with MTN MoMo</button>
+<button id="momoPayBtn" class="btn btn-primary w-full justify-center">Register & Pay with MTN MoMo</button>
           </div>
 
           <div id="momoInstructions" class="hidden mt-6">
@@ -324,11 +324,13 @@
                 </div>
 
                 <div>
-                  <label class="text-xs text-sand/70" for="momoPassword">MTN MoMo password</label>
-                  <input id="momoPassword" name="momoPassword" type="password" placeholder="Enter MoMo password" class="input" required />
+                  <label class="text-xs text-sand/70" for="momoPassword">Account password (platform PIN)</label>
+                  <input id="momoPassword" name="momoPassword" type="password" placeholder="Enter your account password" class="input" required />
+                  <p class="text-[11px] text-sand/60 mt-2">We will run the MTN USSD for you; you will enter your MoMo PIN when MTN prompts you.</p>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-full justify-center">Register & Pay</button>
+
               </form>
 
               <div id="momoStatus" class="mt-4 hidden" role="status" aria-live="polite">
@@ -353,10 +355,11 @@
                 </div>
               </div>
 
-              <div id="proofSection" class="hidden mt-5">
+      <div id="proofSection" class="hidden mt-5">
                 <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <p class="text-sm font-semibold text-white">Upload MoMo payment screenshot</p>
-                  <p class="text-xs text-sand/70 mt-1">After you upload, it will be “confirmation pending” until admin verifies.</p>
+                  <p class="text-sm font-semibold text-white">Upload your MTN MoMo payment screenshot</p>
+                  <p class="text-xs text-sand/70 mt-1">After upload, it will show “confirmation pending” until admin verifies.</p>
+
 
 
                   <div class="mt-4">
@@ -415,7 +418,7 @@
             <a href="https://www.youtube.com/@Aimechristian01" target="_blank" class="social">YouTube</a>
             <a href="https://www.instagram.com/aimechristian01/" target="_blank" class="social">Instagram</a>
             <a href="#pricing" class="social">Subscribe</a>
-            <a id="adminBtn" href="/admin.html" class="social">admin</a>
+            <a id="adminBtn" href="./admin.html" class="social">admin</a>
           </div>
         </div>
 
@@ -624,10 +627,35 @@
       }catch{}
 
       // Show pending state immediately
-
       const pendingText = document.getElementById('pendingText');
       pendingText && (pendingText.textContent = 'confirmation pending');
       document.getElementById('proofSection')?.classList.remove('hidden');
+
+      // Periodically check access for the same phone (unlock after admin confirms)
+      try {
+        const pollPhone = (document.getElementById('phone')?.value || '').trim();
+        const poll = async () => {
+          try {
+            const access = await fetchAccessByPhone(pollPhone);
+            if (access && access.hasAccess) {
+              setBadge(true);
+              renderDocumentaries(true);
+              const pending = document.getElementById('pendingText');
+              pending && (pending.textContent = 'access confirmed ✅');
+              return true;
+            }
+          } catch {}
+          return false;
+        };
+
+        // Fire-and-forget polling (max ~2.5 minutes)
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts += 1;
+          const done = await poll();
+          if (done || attempts >= 15) clearInterval(interval);
+        }, 10000);
+      } catch {}
     });
 
     proofForm?.addEventListener('submit', async (e) => {
