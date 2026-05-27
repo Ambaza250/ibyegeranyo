@@ -1,11 +1,8 @@
-/**
- * server.js - With Title & Summary Support
- */
-
 import express from 'express';
 import path from 'path';
 import fsp from 'fs/promises';
 import cookieParser from 'cookie-parser';
+import multer from 'multer';
 import { put } from '@vercel/blob';
 
 const APP_PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -14,18 +11,14 @@ const ADMIN_USER = 'aime';
 const ADMIN_PASS = 'campIO1!';
 
 const app = express();
-app.use(express.json({ limit: '100mb' }));
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd())));
 
-// Root route
-app.get('/', (req, res) => {
-  res.sendFile(path.resolve(process.cwd(), 'index.html'));
-});
+const upload = multer({ storage: multer.memoryStorage() });
 
-app.get('/admin', (req, res) => {
-  res.sendFile(path.resolve(process.cwd(), 'admin.html'));
-});
+// Root & Admin
+app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.resolve(process.cwd(), 'admin.html')));
 
 // Admin Auth
 app.post('/api/admin/login', (req, res) => {
@@ -44,63 +37,50 @@ app.post('/api/admin/logout', (req, res) => {
 });
 
 app.get('/api/admin/check', (req, res) => {
-  const isAdmin = req.cookies.admin === 'true';
-  res.json({ isLoggedIn: isAdmin });
+  res.json({ isLoggedIn: req.cookies.admin === 'true' });
 });
 
-// ===================== UPLOAD WITH TITLE & SUMMARY =====================
-app.post('/api/upload-documentary', async (req, res) => {
+// ===================== MAIN UPLOAD ENDPOINT =====================
+app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
   const isAdmin = req.cookies.admin === 'true';
   if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const { title, summary, filename, contentType } = req.body;
+    const { title, summary } = req.body;
+    const file = req.file;
 
-    if (!title || !filename) {
-      return res.status(400).json({ error: 'Title and file are required' });
+    if (!title || !file) {
+      return res.status(400).json({ error: 'Title and video file are required' });
     }
 
     // Sanitize title for filename
     const sanitizedTitle = title
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-');
 
-    const extension = filename.split('.').pop();
+    const extension = file.originalname.split('.').pop();
     const blobName = `${sanitizedTitle}.${extension}`;
 
-    const { url } = await put(blobName, '', {
+    // Upload to Vercel Blob
+    const { url } = await put(blobName, file.buffer, {
       access: 'public',
-      contentType: contentType,
+      contentType: file.mimetype,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
-
-    res.json({ success: true, url, title, sanitizedTitle });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Save documentary metadata
-app.post('/api/save-documentary', async (req, res) => {
-  const isAdmin = req.cookies.admin === 'true';
-  if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { title, summary, videoUrl } = req.body;
 
     const metadata = {
       id: Date.now().toString(),
       title: title,
       summary: summary || '',
-      url: videoUrl,
+      url: url,
       uploadedAt: new Date().toISOString()
     };
 
     await saveDocumentary(metadata);
 
-    res.json({ success: true });
+    res.json({ success: true, url });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -131,7 +111,6 @@ async function saveDocumentary(newDoc) {
   const DATA_PATH = path.join(DATA_DIR, 'data.json');
   
   await fsp.mkdir(DATA_DIR, { recursive: true });
-  
   const docs = await readDocumentaries();
   docs.unshift(newDoc);
   await fsp.writeFile(DATA_PATH, JSON.stringify(docs, null, 2));
