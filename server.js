@@ -1,10 +1,9 @@
 /**
- * server.js - Fixed Root Route + Vercel Blob
+ * server.js - With Title & Summary Support
  */
 
 import express from 'express';
 import path from 'path';
-import fs from 'fs';
 import fsp from 'fs/promises';
 import cookieParser from 'cookie-parser';
 import { put } from '@vercel/blob';
@@ -17,21 +16,18 @@ const ADMIN_PASS = 'campIO1!';
 const app = express();
 app.use(express.json({ limit: '100mb' }));
 app.use(cookieParser());
-
-// Serve static files (HTML, CSS, JS, etc.)
 app.use(express.static(path.resolve(process.cwd())));
 
-// === EXPLICIT ROOT ROUTE (This fixes "Cannot GET /") ===
+// Root route
 app.get('/', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'index.html'));
 });
 
-// Admin page
 app.get('/admin', (req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'admin.html'));
 });
 
-// Login
+// Admin Auth
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -42,53 +38,75 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
-// Logout
 app.post('/api/admin/logout', (req, res) => {
   res.clearCookie('admin');
   res.json({ success: true });
 });
 
-// Check auth
 app.get('/api/admin/check', (req, res) => {
   const isAdmin = req.cookies.admin === 'true';
   res.json({ isLoggedIn: isAdmin });
 });
 
-// ===================== VERCEL BLOB UPLOAD =====================
+// ===================== UPLOAD WITH TITLE & SUMMARY =====================
 app.post('/api/upload-documentary', async (req, res) => {
   const isAdmin = req.cookies.admin === 'true';
   if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const { filename, contentType } = req.body;
+    const { title, summary, filename, contentType } = req.body;
 
-    if (!filename || !contentType) {
-      return res.status(400).json({ error: 'Missing file info' });
+    if (!title || !filename) {
+      return res.status(400).json({ error: 'Title and file are required' });
     }
 
-    const { url } = await put(filename, '', {
+    // Sanitize title for filename
+    const sanitizedTitle = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    const extension = filename.split('.').pop();
+    const blobName = `${sanitizedTitle}.${extension}`;
+
+    const { url } = await put(blobName, '', {
       access: 'public',
       contentType: contentType,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    const metadata = {
-      id: Date.now().toString(),
-      title: filename.replace(/\.\w+$/, '').replace(/[-_]/g, ' '),
-      url: url,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    await saveDocumentary(metadata);
-
-    res.json({ success: true, url, metadata });
+    res.json({ success: true, url, title, sanitizedTitle });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Load documentaries
+// Save documentary metadata
+app.post('/api/save-documentary', async (req, res) => {
+  const isAdmin = req.cookies.admin === 'true';
+  if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const { title, summary, videoUrl } = req.body;
+
+    const metadata = {
+      id: Date.now().toString(),
+      title: title,
+      summary: summary || '',
+      url: videoUrl,
+      uploadedAt: new Date().toISOString()
+    };
+
+    await saveDocumentary(metadata);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/documentaries', async (req, res) => {
   try {
     const docs = await readDocumentaries();
