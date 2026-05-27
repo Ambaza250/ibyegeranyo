@@ -97,13 +97,15 @@ const refreshListBtn = document.getElementById('refreshListBtn');
 const docList = document.getElementById('docList');
 
 async function checkAuth() {
-  const res = await fetch('/api/admin/check');
-  const data = await res.json();
-  if (data.isLoggedIn) {
-    loginSection.classList.add('hidden');
-    uploadSection.classList.remove('hidden');
-    loadDocList();
-  }
+  try {
+    const res = await fetch('/api/admin/check');
+    const data = await res.json();
+    if (data.isLoggedIn) {
+      loginSection.classList.add('hidden');
+      uploadSection.classList.remove('hidden');
+      loadDocList();
+    }
+  } catch (e) {}
 }
 
 loginForm.addEventListener('submit', async (e) => {
@@ -111,19 +113,24 @@ loginForm.addEventListener('submit', async (e) => {
   const username = document.getElementById('adminUser').value;
   const password = document.getElementById('adminPass').value;
 
-  const res = await fetch('/api/admin/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  const data = await res.json();
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
 
-  if (data.success) {
-    loginSection.classList.add('hidden');
-    uploadSection.classList.remove('hidden');
-    loadDocList();
-  } else {
-    loginError.textContent = 'Invalid credentials';
+    if (data.success) {
+      loginSection.classList.add('hidden');
+      uploadSection.classList.remove('hidden');
+      loadDocList();
+    } else {
+      loginError.textContent = data.error || 'Invalid credentials';
+      loginError.classList.remove('hidden');
+    }
+  } catch (err) {
+    loginError.textContent = 'Login failed';
     loginError.classList.remove('hidden');
   }
 });
@@ -141,10 +148,12 @@ uploadForm.addEventListener('submit', async (e) => {
   const file = videoFileInput.files[0];
 
   if (!title) return alert("Title is required");
-  if (!file) return alert("Please select a video");
+  if (!file) return alert("Please select a video file");
 
   uploadBtn.disabled = true;
   progressContainer.classList.remove('hidden');
+  progressBar.style.width = '0%';
+  progressText.textContent = '0%';
 
   const formData = new FormData();
   formData.append('title', title);
@@ -157,15 +166,22 @@ uploadForm.addEventListener('submit', async (e) => {
       body: formData
     });
 
-    const data = await res.json();
+    let data;
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("Server returned:", text);
+      throw new Error("Server error - please check server logs");
+    }
 
     if (data.success) {
-      alert('✅ Upload successful!');
+      alert('✅ Documentary uploaded successfully!');
       uploadForm.reset();
       progressContainer.classList.add('hidden');
       loadDocList();
     } else {
-      alert('Upload failed: ' + data.error);
+      alert('Upload failed: ' + (data.error || 'Unknown error'));
     }
   } catch (error) {
     console.error(error);
@@ -193,7 +209,7 @@ async function loadDocList() {
         </div>
       `).join('');
   } catch (e) {
-    docList.innerHTML = '<p class="text-red-500">Failed to load</p>';
+    docList.innerHTML = '<p class="text-red-500">Failed to load list</p>';
   }
 }
 
