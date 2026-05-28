@@ -332,9 +332,9 @@
           return;
         }
 
-        // password isn't currently used by backend; we keep it to match UI.
         const normPhone = String(phone).replace(/\D/g, '');
-        const hasAccess = await checkUserAccess(normPhone);
+        const hasAccess = await checkUserAccess(normPhone, password);
+
 
         if (hasAccess) {
           localStorage.setItem('userPhone', normPhone);
