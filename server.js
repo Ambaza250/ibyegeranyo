@@ -14,7 +14,7 @@ const app = express();
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd())));
 
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 500 * 1024 * 1024 }
 });
@@ -32,14 +32,12 @@ if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !pr
   console.warn('[Cloudinary] Missing credentials. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in environment variables.');
 }
 
-
-
 // Use /tmp for data storage (Vercel compatible)
 const DATA_DIR = '/tmp/documentaries';
 const DATA_PATH = path.join(DATA_DIR, 'data.json');
 
-
-
+const PAYMENTS_DIR = '/tmp/documentaries';
+const PAYMENTS_PATH = path.join(PAYMENTS_DIR, 'payments.json');
 
 // Routes
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
@@ -69,37 +67,18 @@ app.get('/api/admin/me', (req, res) => {
   res.json({ loggedIn: req.cookies.admin === 'true' });
 });
 
-
-const PAYMENTS_DIR = '/tmp/documentaries';
-const PAYMENTS_PATH = path.join(PAYMENTS_DIR, 'payments.json');
-
-function paymentStatusFrom(val) {
-  const v = String(val || '').toLowerCase();
-  if (v === 'confirmed') return 'confirmed';
-  if (v === 'pending') return 'pending';
-  return 'pending';
+function requireAdmin(req, res) {
+  const isAdmin = req.cookies.admin === 'true';
+  if (!isAdmin) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
 }
 
-function computeExpiresAtFromPlan(planType) {
-  const p = String(planType || '').toLowerCase();
-  const now = Date.now();
-  // Basic duration mapping (update later if you want calendar-accurate month ends)
-  if (p === 'weekly') return new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
-  if (p === 'yearly') return new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
-  // single documentary still treated as time-based access
-  if (p === 'single') return new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
-  // default monthly
-  return new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '');
 }
-
-function isPaymentActive(payment) {
-  if (!payment || payment.status !== 'confirmed') return false;
-  if (!payment.expiresAt) return true; // backward compatibility
-  const exp = new Date(payment.expiresAt).getTime();
-  if (!Number.isFinite(exp)) return false;
-  return exp > Date.now();
-}
-
 
 async function readPayments() {
   try {
@@ -117,17 +96,22 @@ async function savePayments(payments) {
   await fsp.writeFile(PAYMENTS_PATH, JSON.stringify(payments, null, 2));
 }
 
-function requireAdmin(req, res) {
-  const isAdmin = req.cookies.admin === 'true';
-  if (!isAdmin) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return false;
-  }
-  return true;
+function computeExpiresAtFromPlan(planType) {
+  const p = String(planType || '').toLowerCase();
+  const now = Date.now();
+  const msDay = 24 * 60 * 60 * 1000;
+  if (p === 'weekly') return new Date(now + 7 * msDay).toISOString();
+  if (p === 'yearly') return new Date(now + 365 * msDay).toISOString();
+  if (p === 'single') return new Date(now + 30 * msDay).toISOString();
+  return new Date(now + 30 * msDay).toISOString();
 }
 
-function normalizePhone(phone) {
-  return String(phone || '').replace(/\D/g, '');
+function isPaymentActive(payment) {
+  if (!payment || payment.status !== 'confirmed') return false;
+  if (!payment.expiresAt) return true; // backward compatibility
+  const exp = new Date(payment.expiresAt).getTime();
+  if (!Number.isFinite(exp)) return false;
+  return exp > Date.now();
 }
 
 function computeUsseForMtnMoMo({ phone, amount, momoCode }) {
@@ -135,21 +119,11 @@ function computeUsseForMtnMoMo({ phone, amount, momoCode }) {
   return `*182*8*${momoCode}*${p}*${amount}#`;
 }
 
-// Create payment request
+// Create payment request (used by current pay flow)
 app.post('/api/payments/create', express.json(), async (req, res) => {
-
   try {
-    // DEBUG: determine why req.body isn't populated
-    // eslint-disable-next-line no-console
-    console.log('DEBUG /api/payments/create content-type:', req.headers['content-type']);
-// eslint-disable-next-line no-console
-    console.log('DEBUG /api/payments/create body keys:', req.body ? Object.keys(req.body) : req.body);
-    // eslint-disable-next-line no-console
-    console.log('DEBUG /api/payments/create body raw:', JSON.stringify(req.body));
-
     const {
       fullName,
-
       phone,
       momoPassword,
       planType,
@@ -157,10 +131,8 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
       documentaryIds
     } = req.body || {};
 
-
-
     const normalizedPhone = normalizePhone(phone);
-    if (!fullName || fullName.trim().length < 2) {
+    if (!fullName || String(fullName).trim().length < 2) {
       return res.status(400).json({ error: 'Full name is required' });
     }
     if (!normalizedPhone || normalizedPhone.length < 9) {
@@ -178,11 +150,11 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
     const momoCode = '12345';
     const ussd = computeUsseForMtnMoMo({ phone: normalizedPhone, amount: amtNum, momoCode });
 
-const record = {
+    const record = {
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      fullName: fullName.trim(),
+      fullName: String(fullName).trim(),
       phone: normalizedPhone,
       momoPassword: String(momoPassword),
       planType: String(planType || '').trim(),
@@ -199,7 +171,6 @@ const record = {
       expiresAt: null
     };
 
-
     const payments = await readPayments();
     payments.unshift(record);
     await savePayments(payments);
@@ -211,11 +182,12 @@ const record = {
   }
 });
 
-// Upload momo screenshot proof
+// Upload momo screenshot proof (legacy: by paymentId)
 app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, res) => {
   try {
     const paymentId = String(req.body?.paymentId || '');
     if (!paymentId) return res.status(400).json({ error: 'paymentId is required' });
+
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'screenshot is required' });
 
@@ -249,6 +221,58 @@ app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, 
   }
 });
 
+// Upload proof by phone (used by current Firestore UI)
+app.post('/api/viewer/proofs/upload', upload.single('screenshot'), async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body?.phone);
+    if (!phone) return res.status(400).json({ error: 'phone is required' });
+
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'screenshot is required' });
+
+    const payments = await readPayments();
+
+    const pending = payments
+      .filter(p => p.phone === phone && p.status === 'pending')
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    if (!pending.length) return res.status(404).json({ error: 'No pending payment for this phone' });
+
+    const target = pending[0];
+    const idx = payments.findIndex(p => p.id === target.id);
+    if (idx === -1) return res.status(404).json({ error: 'Payment not found' });
+
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          folder: 'aime-christian-momo-proofs',
+          public_id: `payment-${target.id}-${phone}-${Date.now()}`,
+          overwrite: true
+        },
+        (error, uploadResult) => {
+          if (error) reject(error);
+          else resolve(uploadResult);
+        }
+      ).end(file.buffer);
+    });
+
+    payments[idx].screenshotUrl = result.secure_url;
+    payments[idx].updatedAt = new Date().toISOString();
+
+    await savePayments(payments);
+
+    res.json({
+      success: true,
+      secureUrl: payments[idx].screenshotUrl,
+      screenshotUrl: payments[idx].screenshotUrl
+    });
+  } catch (err) {
+    console.error('Upload proof (viewer) error:', err);
+    res.status(500).json({ error: err.message || 'Failed to upload proof' });
+  }
+});
+
 // Admin list payments
 app.get('/api/payments', async (req, res) => {
   try {
@@ -264,6 +288,7 @@ app.get('/api/payments', async (req, res) => {
 app.post('/api/payments/confirm', express.json(), async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
+
     const { paymentId } = req.body || {};
     const id = String(paymentId || '');
     if (!id) return res.status(400).json({ error: 'paymentId is required' });
@@ -272,14 +297,13 @@ app.post('/api/payments/confirm', express.json(), async (req, res) => {
     const idx = payments.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ error: 'Payment not found' });
 
-payments[idx].status = 'confirmed';
+    payments[idx].status = 'confirmed';
     payments[idx].confirmedAt = new Date().toISOString();
     payments[idx].updatedAt = new Date().toISOString();
-    // Set expiry when admin confirms (for backward compatible payments without expiresAt)
+
     if (!payments[idx].expiresAt) {
       payments[idx].expiresAt = computeExpiresAtFromPlan(payments[idx].planType);
     }
-
 
     await savePayments(payments);
     res.json({ success: true });
@@ -297,7 +321,7 @@ app.post('/api/viewer/login', express.json(), async (req, res) => {
     const pass = String(password || '');
 
     if (!p || p.length < 9) return res.status(400).json({ error: 'Valid phone number is required' });
-    if (!pass || pass.length < 1) return res.status(400).json({ error: 'Password is required' });
+    if (!pass) return res.status(400).json({ error: 'Password is required' });
 
     const payments = await readPayments();
 
@@ -311,7 +335,6 @@ app.post('/api/viewer/login', express.json(), async (req, res) => {
       return res.status(403).json({ success: false, reason: 'go_pay' });
     }
 
-    // Session cookie
     res.cookie('viewer', JSON.stringify({ phone: active.phone }), {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000
@@ -365,7 +388,7 @@ app.get('/api/viewer/me', async (req, res) => {
   }
 });
 
-// Backward-compatible endpoint (optional): still supports ?phone= but now respects expiry
+// Backward-compatible endpoint
 app.get('/api/me/access', async (req, res) => {
   try {
     const phone = normalizePhone(req.query.phone);
@@ -373,7 +396,6 @@ app.get('/api/me/access', async (req, res) => {
 
     const payments = await readPayments();
     const confirmed = payments.find(p => p.phone === phone && isPaymentActive(p));
-
     if (!confirmed) return res.json({ hasAccess: false });
 
     res.json({
@@ -392,8 +414,7 @@ app.get('/api/me/access', async (req, res) => {
   }
 });
 
-
-// Upload Endpoint
+// Upload Endpoint (Admin)
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
   try {
     const isAdmin = req.cookies.admin === 'true';
@@ -406,20 +427,18 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
       return res.status(400).json({ error: 'Title and video file are required' });
     }
 
-
     const sanitizedTitle = title
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-');
 
-    // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
-          resource_type: "video",
+          resource_type: 'video',
           public_id: sanitizedTitle,
-          folder: "aime-christian-documentaries",
+          folder: 'aime-christian-documentaries',
           overwrite: true
         },
         (error, result) => {
@@ -431,18 +450,16 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
 
     const metadata = {
       id: Date.now().toString(),
-      title: title,
+      title,
       summary: summary || '',
       url: result.secure_url,
       uploadedAt: new Date().toISOString()
     };
 
     await saveDocumentary(metadata);
-
     res.json({ success: true, url: result.secure_url });
-
   } catch (error) {
-    console.error("Upload Error:", error);
+    console.error('Upload Error:', error);
     res.status(500).json({ error: error.message || 'Upload failed' });
   }
 });
@@ -473,7 +490,7 @@ async function saveDocumentary(newDoc) {
     docs.unshift(newDoc);
     await fsp.writeFile(DATA_PATH, JSON.stringify(docs, null, 2));
   } catch (err) {
-    console.error("Save Error:", err);
+    console.error('Save Error:', err);
     throw err;
   }
 }
@@ -481,3 +498,4 @@ async function saveDocumentary(newDoc) {
 app.listen(APP_PORT, () => {
   console.log(`🚀 Server running on http://localhost:${APP_PORT}`);
 });
+

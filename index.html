@@ -458,8 +458,27 @@
   </div>
 
   <!-- Inline script.js: avoids broken external script loading on Vercel -->
+  <!-- Firebase (Web config) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
-  // Payment + paywall (server-side verification)
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
+    authDomain: "ibyegeranyo-6e49b.firebaseapp.com",
+    projectId: "ibyegeranyo-6e49b",
+    storageBucket: "ibyegeranyo-6e49b.firebasestorage.app",
+    messagingSenderId: "629430042353",
+    appId: "1:629430042353:web:7bbd7e6549f4b224913350",
+    measurementId: "G-GF146S03X0"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // Payment + paywall (Firestore-backed)
+
 
   const DOCUMENTARIES = [
     { id:'doc-1', title:'Inyenyeri z’Ubwenge', duration:'43:12', description:'Rwanda — stories of resilience and the truth behind the headlines.', thumbnail:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=900&q=70', embedUrl:'https://www.youtube.com/embed/ScMzIvxBSi4?rel=0' },
@@ -585,18 +604,73 @@
   }
 
 
-async function initPayFlow(){
-    // Do not allow paying flow when logged in with an active subscription
-    try {
-      const r = await fetch('/api/viewer/me');
-      const data = await r.json().catch(()=>({}));
-      if(data && data.loggedIn && data.hasAccess){
-        const paymentPreview = document.getElementById('proofSection');
-        // keep pay button but locked UI is fine
-      }
-    } catch {}
+  function normalizePhone(phone){
+    return String(phone || '').replace(/\D/g,'');
+  }
 
+  function computeExpiresAt(planType){
+    const now = Date.now();
+    const p = String(planType || '').toLowerCase();
+    const msDay = 24*60*60*1000;
+    if(p === 'weekly') return new Date(now + 7*msDay).toISOString();
+    if(p === 'yearly') return new Date(now + 365*msDay).toISOString();
+    // single = 30 days for now
+    if(p === 'single') return new Date(now + 30*msDay).toISOString();
+    // monthly default
+    return new Date(now + 30*msDay).toISOString();
+  }
+
+  function isActive(payment){
+    if(!payment) return false;
+    const status = String(payment.status || '').toLowerCase();
+    if(status !== 'confirmed') return false;
+    if(!payment.endDate) return true; // backward compat
+    const t = new Date(payment.endDate).getTime();
+    if(!Number.isFinite(t)) return false;
+    return t > Date.now();
+  }
+
+  async function viewerGetUser(phone){
+    const p = normalizePhone(phone);
+    if(!p) return null;
+    const docRef = db.collection('users').doc(p);
+    const snap = await docRef.get();
+    if(!snap.exists) return null;
+    return { id: snap.id, ...snap.data() };
+  }
+
+  async function viewerLogin(phone, password){
+    const p = normalizePhone(phone);
+    if(!p || !password) return { ok:false, reason:'invalid' };
+    const user = await viewerGetUser(p);
+    if(!user) return { ok:false, reason:'go_pay' };
+
+    // verify password (stored plain text as per your assumption)
+    if(String(user.password || '') !== String(password)) return { ok:false, reason:'go_pay' };
+
+    // determine status/pending/active
+    const pay = user.payment || user.subscription || null;
+    if(pay && isActive(pay)) return { ok:true, active: pay };
+
+    if(pay && String(pay.status || '').toLowerCase() === 'pending') return { ok:false, reason:'pending' };
+    return { ok:false, reason:'go_pay' };
+  }
+
+  async function viewerGetMe(){
+    try{
+      const phone = localStorage.getItem('viewer_phone') || '';
+      if(!phone) return { loggedIn:false };
+      const user = await viewerGetUser(phone);
+      if(!user) return { loggedIn:false };
+      const pay = user.payment || user.subscription || null;
+      if(pay && isActive(pay)) return { loggedIn:true, hasAccess:true, access: pay };
+      return { loggedIn:true, hasAccess:false, reason: String(pay?.status||'').toLowerCase() === 'pending' ? 'pending' : 'go_pay' };
+    }catch{ return { loggedIn:false }; }
+  }
+
+  async function initPayFlow(){
     const payBtn = document.getElementById('momoPayBtn');
+
     const instructions = document.getElementById('momoInstructions');
     const form = document.getElementById('momoForm');
 
@@ -630,28 +704,25 @@ async function initPayFlow(){
 
       if(!fullName || !phone || !momoPassword) return;
 
-      // Create payment request (server persists it)
-      const createRes = await fetch('/api/payments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName,
-          phone,
-          momoPassword,
-          planType,
-          amount,
-          documentaryIds
-        })
-      });
+      // Firestore payment request (create pending subscription)
+      const phoneNorm = normalizePhone(phone);
+      const expiresAt = computeExpiresAt(planType);
 
-      const createData = await createRes.json().catch(()=>({}));
-      if(!createRes.ok || !createData.success){
-        if(statusText) statusText.textContent = createData.error || 'Failed to create payment';
-        if(statusTitle) statusTitle.textContent = 'Error';
-        status?.classList.remove('hidden');
-        return;
-      }
+      const payment = {
+        status: 'pending',
+        planType,
+        amount,
+        documentaryIds,
+        startDate: null,
+        endDate: null,
+        expiresAt: null,
+        fullName: fullName || '',
+        // per your assumption: store plain password for now
+        momoPassword: String(momoPassword),
+        updatedAt: new Date().toISOString()
+      };
 
+      // Show pending state + screenshot upload section
       if(status){
         status.classList.remove('hidden');
         if(successBox) successBox.classList.add('hidden');
@@ -659,77 +730,78 @@ async function initPayFlow(){
         if(statusText) statusText.textContent = 'After you finish, upload the screenshot below.';
       }
 
-      // Store paymentId for proof upload
-      if(paymentIdInput) paymentIdInput.value = createData.paymentId;
+      // Store to Firestore
+      await db.collection('users').doc(phoneNorm).set({
+        phone: phoneNorm,
+        updatedAt: new Date().toISOString(),
+        fullName: fullName || '',
+        password: String(momoPassword),
+        payment: payment
+      }, { merge: true });
 
-      // Trigger USSD dial in phone (best-effort)
-      const ussd = createData.ussd || buildUSSD(phone, amount);
-
-      // Manual method requested by user (PIN entry happens when MTN prompts)
+      // Dial USSD (best-effort) + show manual code
+      const ussd = buildUSSD(phoneNorm, amount);
       const manualUssd = buildManualUssd(amount);
 
-      // Always show manual method code
       document.getElementById('manualUssdWrap')?.classList.remove('hidden');
       showManualUssd(manualUssd);
 
-      // Dialer attempt: best-effort (some devices may not open MoMo USSD automatically)
-      try{
-        window.location.href = `tel:${encodeURIComponent(ussd)}`;
-      }catch{}
+      try{ window.location.href = `tel:${encodeURIComponent(ussd)}`; }catch{}
 
-      // Show pending state + screenshot upload section
       const pendingText = document.getElementById('pendingText');
       pendingText && (pendingText.textContent = 'confirmation pending');
       document.getElementById('proofSection')?.classList.remove('hidden');
-
-      // Make sure the manual USSD block is visible too
       document.getElementById('manualUssdWrap')?.classList.remove('hidden');
 
-      // Periodically check access for the same phone (unlock after admin confirms)
+      // Periodically check access via Firestore (unlock after admin confirms)
       try {
-        const pollPhone = (document.getElementById('phone')?.value || '').trim();
+        const pollPhone = normalizePhone(document.getElementById('phone')?.value || '');
+        // set session phone for viewerGetMe compatibility
+        localStorage.setItem('viewer_phone', pollPhone);
+
         const poll = async () => {
-          try {
-            const access = await fetchAccessByPhone(pollPhone);
-            if (access && access.hasAccess) {
-              setBadge(true);
-              renderDocumentaries(true);
-              const pending = document.getElementById('pendingText');
-              pending && (pending.textContent = 'access confirmed ✅');
-              return true;
-            }
-          } catch {}
+          const user = await viewerGetUser(pollPhone);
+          const pay = user?.payment || user?.subscription || null;
+          if(pay && isActive(pay)){
+            setBadge(true);
+            renderDocumentaries(true);
+            const pending = document.getElementById('pendingText');
+            pending && (pending.textContent = 'access confirmed ✅');
+            return true;
+          }
           return false;
         };
 
-        // Fire-and-forget polling (max ~2.5 minutes)
         let attempts = 0;
         const interval = setInterval(async () => {
           attempts += 1;
           const done = await poll();
-          if (done || attempts >= 15) clearInterval(interval);
+          if(done || attempts >= 15) clearInterval(interval);
         }, 10000);
       } catch {}
+
+
 
     });
 
     proofForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const paymentId = paymentIdInput?.value?.trim();
-      if(!paymentId) return;
-
       const file = proofFileInput?.files?.[0];
       if(!file) return;
 
-      const fd = new FormData();
-      fd.append('paymentId', paymentId);
-      fd.append('screenshot', file);
+      const phone = normalizePhone(document.getElementById('phone')?.value || '');
+      if(!phone) return;
 
       proofSubmitBtn && (proofSubmitBtn.disabled = true);
 
       try{
-        const res = await fetch('/api/payments/upload-proof', {
+        // Upload proof to backend (Cloudinary) then store secure_url into Firestore.
+        const fd = new FormData();
+        fd.append('phone', phone);
+        fd.append('screenshot', file);
+
+        const res = await fetch('/api/viewer/proofs/upload', {
           method: 'POST',
           body: fd
         });
@@ -739,6 +811,16 @@ async function initPayFlow(){
           if(statusText) statusText.textContent = data.error || 'Failed to upload proof';
           return;
         }
+
+        const secureUrl = data.secureUrl || data.screenshotUrl || null;
+        const userDocRef = db.collection('users').doc(phone);
+        await userDocRef.set({
+          updatedAt: new Date().toISOString(),
+          payment: {
+            screenshotUrl: secureUrl,
+            updatedAt: new Date().toISOString()
+          }
+        }, { merge: true });
 
         if(statusTitle) statusTitle.textContent = 'Proof uploaded ✅';
         if(statusText) statusText.textContent = 'confirmation pending';
@@ -780,15 +862,14 @@ async function initPayFlow(){
     // Do not auto-open modal on page load; only open via Login button.
 
     try {
-      const res = await fetch('/api/viewer/me');
-
-      const data = await res.json().catch(()=>({}));
+      const data = await viewerGetMe();
       if(data && data.loggedIn && data.hasAccess){
         setBadge(true);
         renderDocumentaries(true);
         loginModalEl?.classList.add('hidden');
       }
     } catch {}
+
 
     loginFormEl?.addEventListener('submit', async (e)=>{
       e.preventDefault();
@@ -800,14 +881,12 @@ async function initPayFlow(){
           setLoginMessage('Phone and password are required', 'error');
           return;
         }
-        const r = await fetch('/api/viewer/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, password })
-        });
 
-        const data = await r.json().catch(()=>({}));
-        if(r.ok && data && data.success){
+        const pNorm = normalizePhone(phone);
+        const r = await viewerLogin(pNorm, password);
+
+        if(r && r.ok){
+          localStorage.setItem('viewer_phone', pNorm);
           loginModalEl?.classList.add('hidden');
           setLoginMessage('Login successful ✅', 'ok');
           setBadge(true);
@@ -815,7 +894,7 @@ async function initPayFlow(){
           return;
         }
 
-        if(data && data.reason === 'pending'){
+        if(r && r.reason === 'pending'){
           setLoginMessage('Payment is pending approval by admin. Please wait.', 'error');
           loginModalEl?.classList.remove('hidden');
           setBadge(false);
@@ -823,9 +902,8 @@ async function initPayFlow(){
           return;
         }
 
-        if(data && data.reason === 'go_pay'){
+        if(r && r.reason === 'go_pay'){
           setLoginMessage('Your subscription is not active. Please go pay to unlock.', 'error');
-          // keep modal open so they can re-login after paying
           loginModalEl?.classList.remove('hidden');
           document.getElementById('pricing')?.scrollIntoView({ behavior:'smooth', block:'start' });
           setBadge(false);
@@ -833,11 +911,12 @@ async function initPayFlow(){
           return;
         }
 
-        setLoginMessage(data.error || 'Login failed', 'error');
+        setLoginMessage('Login failed', 'error');
       }catch(err){
         setLoginMessage('Login failed', 'error');
       }
     });
+
 
     await initPayFlow();
   }
