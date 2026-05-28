@@ -333,37 +333,47 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
 });
 
 // Check user access (login gate)
-// metrics:
-// 1) number exists => matching record for phone
-// 2) password matches => payment.momoPassword === password
-// 3) status confirmed => payment.status === 'confirmed'
-// 4) not expired => payment.expiresAt in the future
+// IMPORTANT: login verification reads from Firestore `users/{phone}.payment`.
+// Admin flows/upload-proof still use local payments.json as usual.
 app.get('/api/me/access', async (req, res) => {
   try {
     const { phone, password } = req.query;
     if (!phone) return res.json({ hasAccess: false });
 
     const normalizedPhone = normalizePhone(phone);
-    const payments = await readPayments();
-
-    // Find any record for the phone (number exists check)
-    const paymentForPhone = payments.find(p => p.phone === normalizedPhone);
-    if (!paymentForPhone) {
+    const userSnap = await db.collection('users').doc(normalizedPhone).get();
+    if (!userSnap.exists) {
       return res.json({ hasAccess: false, reason: 'NO_ACCOUNT' });
     }
 
-    // Password match check (only when password is provided)
-    if (password !== undefined && password !== null && String(password).length > 0) {
-      if (!doesPasswordMatch(paymentForPhone, password)) {
-        return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
-      }
+    const data = userSnap.data() || {};
+    const payment = data.payment || data.subscription || null;
+    if (!payment) {
+      return res.json({ hasAccess: false, reason: 'NO_PAYMENT' });
     }
 
+    // Metrics from your verified firestore structure:
+    // status must be confirmed, expiry must be in the future
+    const status = String(payment.status || '').toLowerCase();
+    if (status !== 'confirmed') {
+      return res.json({ hasAccess: false, reason: 'NOT_CONFIRMED' });
+    }
 
-    // status + expiry check
-    const activePayment = paymentForPhone && isPaymentActive(paymentForPhone) ? paymentForPhone : null;
-    if (!activePayment) {
+    const expiresAtRaw = payment.expiresAt || payment.endDate;
+    if (!expiresAtRaw) {
+      return res.json({ hasAccess: false, reason: 'NO_EXPIRES' });
+    }
+
+    const expiresAt = new Date(expiresAtRaw).getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       return res.json({ hasAccess: false, reason: 'NOT_ACTIVE' });
+    }
+
+    // Password match only when password is provided (login passes it)
+    if (password !== undefined && password !== null && String(password).length > 0) {
+      if (String(payment.momoPassword) !== String(password)) {
+        return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
+      }
     }
 
     return res.json({ hasAccess: true });
@@ -372,6 +382,7 @@ app.get('/api/me/access', async (req, res) => {
     res.json({ hasAccess: false });
   }
 });
+
 
 
 app.listen(APP_PORT, () => {
