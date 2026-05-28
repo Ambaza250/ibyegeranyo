@@ -88,6 +88,7 @@
             <span id="subscriptionBadgeText">Free</span>
           </span>
 
+          <button id="navRegisterBtn" class="btn btn-primary px-4 py-2 text-sm" type="button">Register</button>
           <a id="navSubscribe" href="#pricing" class="btn btn-ghost px-4 py-2 text-sm">Subscribe / Pay</a>
         </div>
       </div>
@@ -111,9 +112,7 @@
             <h1 class="hero-title">
               Watch <span class="text-gold">Aime Christian</span> Documentaries Ad-Free
             </h1>
-            <p class="hero-sub">
-              Premium access to uncut, advertisement-free Rwandan stories and investigations.
-            </p>
+            <p class="hero-sub">Premium access to uncut, advertisement-free Rwandan stories and investigations.</p>
 
             <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
               <a href="#pricing" class="btn btn-primary">Subscribe for 2,000 RWF/month</a>
@@ -124,7 +123,7 @@
       </div>
     </section>
 
-    <!-- LIBRARY SECTION - DYNAMIC FROM FIRESTORE -->
+    <!-- LIBRARY SECTION -->
     <section id="library" class="mx-auto max-w-6xl px-4 sm:px-6 py-16">
       <div class="section-title mb-10">
         <h2 class="text-3xl font-semibold">Our Documentaries</h2>
@@ -133,9 +132,7 @@
 
       <div id="docGrid" class="flex gap-6 overflow-x-auto pb-8"></div>
 
-      <div id="libraryEmpty" class="hidden text-center py-12 text-sand/60">
-        No documentaries available yet.
-      </div>
+      <div id="libraryEmpty" class="hidden text-center py-12 text-sand/60">No documentaries available yet.</div>
     </section>
 
     <!-- About -->
@@ -144,13 +141,10 @@
         <h2 class="text-2xl md:text-3xl font-semibold text-white">About Aime Christian</h2>
         <p class="text-sand/70">Murakaza neza — welcome to premium documentary access.</p>
       </div>
-      <!-- (Your original about content) -->
       <div class="grid md:grid-cols-5 gap-8 items-start mt-8">
         <div class="md:col-span-2">
           <div class="glass-card p-6">
-            <p class="text-sm md:text-base text-sand/85 leading-relaxed">
-              Aime Christian is a Rwandan Independent Documentary Maker.
-            </p>
+            <p class="text-sm md:text-base text-sand/85 leading-relaxed">Aime Christian is a Rwandan Independent Documentary Maker.</p>
           </div>
         </div>
       </div>
@@ -158,23 +152,20 @@
 
     <!-- Pricing -->
     <section id="pricing" class="mx-auto max-w-6xl px-4 sm:px-6 py-14">
-      <!-- Keep your full original pricing section here (unchanged) -->
       <div class="section-title">
         <h2 class="text-2xl md:text-3xl font-semibold text-white">Pricing & Paywall</h2>
         <p class="text-sand/70">2,000 RWF/month. Cancel anytime.</p>
       </div>
-      <!-- ... paste your full pricing HTML if needed ... -->
       <div class="glass-card p-8 text-center">
         <button id="momoPayBtn" class="btn btn-primary w-full max-w-md mx-auto">Pay with MTN MoMo</button>
       </div>
     </section>
 
-    <!-- How it works -->
+    <!-- How -->
     <section id="how" class="mx-auto max-w-6xl px-4 sm:px-6 py-14">
       <div class="section-title">
         <h2 class="text-2xl md:text-3xl font-semibold">How It Works</h2>
       </div>
-      <!-- Your original steps -->
     </section>
 
     <footer class="border-t border-white/5 bg-black/70 backdrop-blur">
@@ -193,11 +184,91 @@
         <p class="text-xs text-sand/60 mt-8">© <span id="year"></span> Aime Christian. All rights reserved.</p>
       </div>
     </footer>
-</div>
+  </div>
 
-  <!-- Register Dropdown Modal -->
-  <div id="register
-    // Firebase Config
+  <!-- Register Modal (inline on main page) -->
+  <div id="registerModal" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center">
+    <div class="w-full max-w-2xl px-4">
+      <div class="glass-card p-6 md:p-8">
+        <div class="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-2xl md:text-3xl font-semibold text-white">Register & Create Access</h2>
+            <p class="text-sand/70 text-sm mt-1">Choose a plan, create a payment record, then upload your screenshot.</p>
+          </div>
+          <button id="closeRegisterModal" type="button" class="btn btn-ghost px-4 py-2 text-sm">Close</button>
+        </div>
+
+        <form id="registerForm" class="space-y-5">
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs text-sand/70" for="regPhone">Phone number</label>
+              <input id="regPhone" class="input mt-2" inputmode="numeric" placeholder="e.g. 0781234567" required />
+            </div>
+            <div>
+              <label class="text-xs text-sand/70" for="regFullName">Name</label>
+              <input id="regFullName" class="input mt-2" placeholder="Your name" required />
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs text-sand/70" for="regAccountPassword">Account password (used for login)</label>
+              <input id="regAccountPassword" type="password" class="input mt-2" placeholder="Create password" required />
+            </div>
+            <div>
+              <label class="text-xs text-sand/70" for="regTier">Payment tier</label>
+              <select id="regTier" class="input mt-2" required>
+                <option value="monthly">200 RWF / month (expires ~ 1 month)</option>
+                <option value="weekly">700 RWF / week (expires 7 days)</option>
+                <option value="single">2000 RWF / 1 documentary (expires ~ 30 days)</option>
+                <option value="yearly">22000 RWF / year (expires 365 days)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs text-sand/70" for="regAmount">Amount</label>
+              <input id="regAmount" class="input mt-2" inputmode="numeric" disabled />
+            </div>
+            <div>
+              <label class="text-xs text-sand/70" for="regPlanType">Plan type</label>
+              <input id="regPlanType" class="input mt-2" disabled />
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs text-sand/70">USSD (tel link)</p>
+            <div class="mt-2 flex flex-col sm:flex-row gap-3 items-stretch">
+              <input id="regUssdCode" class="input flex-1" disabled />
+              <button id="regDialBtn" type="button" class="btn btn-primary">Dial now</button>
+            </div>
+            <p class="text-xs text-sand/60 mt-3">If tel dialing is blocked on your device, copy the code and dial manually.</p>
+          </div>
+
+          <div>
+            <label class="text-xs text-sand/70" for="regScreenshot">Upload your payment screenshot</label>
+            <input id="regScreenshot" type="file" accept="image/*" class="input mt-2" required />
+            <p class="text-xs text-sand/60 mt-2">Screenshot will be sent to Cloudinary and named based on your name + payment date.</p>
+          </div>
+
+          <input type="hidden" id="regPaymentId" />
+
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button id="regCreateBtn" type="submit" class="btn btn-primary flex-1">Register & create payment</button>
+            <button id="regUploadBtn" type="button" class="btn btn-ghost flex-1">Upload screenshot</button>
+          </div>
+
+          <div id="regStatusBox" class="hidden rounded-xl border border-white/10 bg-white/5 p-4 text-sm"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
       authDomain: "ibyegeranyo-6e49b.firebaseapp.com",
@@ -207,153 +278,265 @@
       appId: "1:629430042353:web:7bbd7e6549f4b224913350"
     };
 
+    // Firebase init kept to avoid breaking existing config; library is backend-gated via /api.
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
 
-    // Fetch documentaries from Firestore
-    async function fetchDocumentaries() {
-      try {
-        const snapshot = await db.collection('documentaries')
-          .orderBy('uploadedAt', 'desc')
-          .get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      } catch (e) {
-        console.error("Error fetching documentaries:", e);
-        return [];
-      }
+    async function fetchDocumentaries(){
+      const res = await fetch('/api/documentaries');
+      if(!res.ok) throw new Error('Failed to fetch documentaries');
+      return res.json();
     }
 
-    // Backend access check: paid + not expired
-    async function checkUserAccess(phone, password) {
-      if (!phone) return false;
-      try {
-        const qs = new URLSearchParams({ phone });
-        if (password !== undefined) qs.set('password', password);
-        const res = await fetch(`/api/me/access?${qs.toString()}`);
-        const data = await res.json();
-        return data && data.hasAccess === true;
-      } catch (e) {
-        console.error(e);
-        return false;
-      }
+    async function checkUserAccess(phone, password){
+      if(!phone) return false;
+      const qs = new URLSearchParams({ phone });
+      if(password !== undefined && password !== null && String(password).length > 0) qs.set('password', password);
+      const res = await fetch(`/api/me/access?${qs.toString()}`);
+      const data = await res.json();
+      return data && data.hasAccess === true;
     }
 
-
-
-    // Render dynamic library
-    // fetch docs & always render them; gate playback on click by checking /api/me/access
-    async function renderDocumentaries() {
-      const grid = document.getElementById('docGrid');
-      const empty = document.getElementById('libraryEmpty');
-      const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
-
-      const docs = await fetchDocumentaries();
-
-
-      if (docs.length === 0) {
-        grid.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-      }
-      empty.classList.add('hidden');
-
-      let html = '';
-      for (const doc of docs) {
-        html += `
-          <article class="doc-card" data-doc-id="${doc.id}">
-            <div class="doc-thumb" style={`background-image: url('${doc.thumbnail}) }></div>
-            <div class="p-5 doc-meta">
-              <h3 class="text-white font-semibold text-base leading-snug">${doc.title}</h3>
-              <p class="text-sm text-sand/80 mt-2 line-clamp-3">${doc.summary || ''}</p>
-              <div class="mt-5">
-                <button class="btn btn-ghost w-full justify-center text-sm"
-                        onclick="onDocumentaryClick('${doc.id}')">
-                  Watch now
-                </button>
-              </div>
-
-            </div>
-          </article>`;
-      }
-      grid.innerHTML = html;
-    }
-
-    function goToPricing() {
+    function goToPricing(){
       document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // Gate playback by backend access. If no active paid subscription => redirect to pricing.
-    async function onDocumentaryClick(docId) {
-      try {
+    async function onDocumentaryClick(docId){
+      try{
         const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
         const hasAccess = await checkUserAccess(phone);
-        if (!hasAccess) {
+        if(!hasAccess){
           goToPricing();
           return;
         }
 
         const docs = await fetchDocumentaries();
         const doc = docs.find(d => String(d.id) === String(docId));
-        if (!doc || !doc.cloudinaryUrl) {
+        if(!doc || !doc.cloudinaryUrl){
           alert('Video not available');
           return;
         }
         window.open(doc.cloudinaryUrl, '_blank');
-      } catch (e) {
+      }catch(e){
         console.error(e);
         alert('Unable to open documentary');
       }
     }
 
-    // Initialize everything
-    async function init() {
+    async function renderDocumentaries(){
+      const grid = document.getElementById('docGrid');
+      const empty = document.getElementById('libraryEmpty');
 
-      document.getElementById('year').textContent = new Date().getFullYear();
-      await renderDocumentaries();
+      const docs = await fetchDocumentaries();
+      if(!Array.isArray(docs) || docs.length === 0){
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
 
-      // Login button
-      document.getElementById('navLoginBtn').addEventListener('click', () => {
-        document.getElementById('loginModal').classList.remove('hidden');
+      empty.classList.add('hidden');
+      grid.innerHTML = docs.map(doc => `
+        <article class="doc-card" data-doc-id="${doc.id}">
+          <div class="doc-thumb" style="background-image:url('${doc.thumbnail || 'https://picsum.photos/600/340'}')"></div>
+          <div class="p-5 doc-meta">
+            <h3 class="text-white font-semibold text-base leading-snug">${doc.title}</h3>
+            <p class="text-sm text-sand/80 mt-2 line-clamp-3">${doc.summary || ''}</p>
+            <div class="mt-5">
+              <button class="btn btn-ghost w-full justify-center text-sm" onclick="onDocumentaryClick('${doc.id}')">Watch now</button>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function setupRegisterModal(){
+      const navRegisterBtn = document.getElementById('navRegisterBtn');
+      const registerModal = document.getElementById('registerModal');
+      const closeBtn = document.getElementById('closeRegisterModal');
+
+      const registerForm = document.getElementById('registerForm');
+      const regPhone = document.getElementById('regPhone');
+      const regFullName = document.getElementById('regFullName');
+      const regAccountPassword = document.getElementById('regAccountPassword');
+      const regTier = document.getElementById('regTier');
+      const regAmount = document.getElementById('regAmount');
+      const regPlanType = document.getElementById('regPlanType');
+      const regUssdCode = document.getElementById('regUssdCode');
+      const regDialBtn = document.getElementById('regDialBtn');
+      const regScreenshot = document.getElementById('regScreenshot');
+      const regPaymentId = document.getElementById('regPaymentId');
+      const regCreateBtn = document.getElementById('regCreateBtn');
+      const regUploadBtn = document.getElementById('regUploadBtn');
+      const regStatusBox = document.getElementById('regStatusBox');
+
+      function phoneInputToAmount(tier){
+        switch(String(tier)){
+          case 'monthly': return 200;
+          case 'weekly': return 700;
+          case 'single': return 2000;
+          case 'yearly': return 22000;
+          default: return 200;
+        }
+      }
+
+      function computeUSSD(phone, amount){
+        // *182*8*1*12345*{amount}#
+        const amt = String(amount);
+        return `*182*8*1*12345*${amt}#`;
+      }
+
+      function showRegStatus(msg, isError=false){
+        if(!regStatusBox) return;
+        regStatusBox.classList.remove('hidden');
+        regStatusBox.style.borderColor = isError ? 'rgba(220,38,38,0.5)' : 'rgba(255,255,255,0.10)';
+        regStatusBox.style.color = isError ? 'rgba(220,38,38,0.95)' : 'white';
+        regStatusBox.textContent = msg;
+      }
+
+      function updateTierUI(){
+        const tier = regTier.value;
+        const amt = phoneInputToAmount(tier);
+        regAmount.value = String(amt);
+        regPlanType.value = String(tier);
+        const phoneVal = (regPhone.value || '').trim();
+        regUssdCode.value = computeUSSD(phoneVal, amt);
+      }
+
+      regTier.addEventListener('change', updateTierUI);
+      regPhone.addEventListener('input', updateTierUI);
+      updateTierUI();
+
+      navRegisterBtn?.addEventListener('click', () => {
+        registerModal?.classList.remove('hidden');
       });
+      closeBtn?.addEventListener('click', () => {
+        registerModal?.classList.add('hidden');
+      });
+
+      regDialBtn?.addEventListener('click', () => {
+        const ussd = regUssdCode.value || '';
+        if(!ussd) return;
+        window.location.href = `tel:${encodeURIComponent(ussd)}`;
+      });
+
+      async function apiFetch(url, options = {}){
+        const res = await fetch(url, options);
+        const text = await res.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+        if(!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+        return data;
+      }
+
+      registerForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const fullName = regFullName.value.trim();
+        const phone = regPhone.value.trim();
+        const password = regAccountPassword.value.trim();
+        const planType = regTier.value;
+        const amount = regAmount.value;
+
+        if(!phone || !fullName || !password){
+          showRegStatus('Please fill phone, name, and password.', true);
+          return;
+        }
+
+        regCreateBtn.disabled = true;
+        try{
+          const res = await apiFetch('/api/payments/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fullName,
+              phone,
+              momoPassword: password,
+              planType,
+              amount
+            })
+          });
+
+          if(res?.success){
+            regPaymentId.value = res.paymentId;
+            showRegStatus('Payment created. Now upload your screenshot ✅');
+            regDialBtn?.click();
+          }else{
+            throw new Error(res?.error || 'Create payment failed');
+          }
+        }catch(err){
+          showRegStatus(err.message || 'Failed to create payment', true);
+        }finally{
+          regCreateBtn.disabled = false;
+        }
+      });
+
+      regUploadBtn?.addEventListener('click', async () => {
+        const paymentId = regPaymentId.value;
+        const file = regScreenshot.files?.[0];
+
+        if(!paymentId){ showRegStatus('Create payment first.', true); return; }
+        if(!file){ showRegStatus('Select a screenshot first.', true); return; }
+
+        regUploadBtn.disabled = true;
+        try{
+          const formData = new FormData();
+          formData.append('paymentId', paymentId);
+          formData.append('fullName', regFullName.value.trim());
+          formData.append('screenshot', file);
+
+          const res = await fetch('/api/payments/upload-proof', { method: 'POST', body: formData }).then(r=>r.json());
+          if(res?.success){
+            showRegStatus('Screenshot uploaded. Admin will verify ✅');
+          }else{
+            throw new Error(res?.error || 'Upload failed');
+          }
+        }catch(err){
+          showRegStatus(err.message || 'Upload failed', true);
+        }finally{
+          regUploadBtn.disabled = false;
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('year').textContent = new Date().getFullYear();
+      renderDocumentaries();
+      setupRegisterModal();
 
       const loginForm = document.getElementById('loginForm');
       const loginPhoneEl = document.getElementById('loginPhone');
       const loginPasswordEl = document.getElementById('loginPassword');
       const loginMessageEl = document.getElementById('loginMessage');
 
-      // Viewer login: only store phone locally if access is confirmed + not expired
+      document.getElementById('subscriptionBadgeText').textContent = 'Free';
+
+      document.getElementById('navLoginBtn')?.addEventListener('click', () => {
+        document.getElementById('loginModal').classList.remove('hidden');
+      });
+
       loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const phone = loginPhoneEl?.value?.trim();
         const password = loginPasswordEl?.value?.trim();
 
-        if (!phone || !password) {
-          if (loginMessageEl) loginMessageEl.textContent = 'Phone and password are required.';
+        if(!phone || !password){
+          if(loginMessageEl) loginMessageEl.textContent = 'Phone and password are required.';
           return;
         }
 
         const normPhone = String(phone).replace(/\D/g, '');
         const hasAccess = await checkUserAccess(normPhone, password);
 
-
-
-        if (hasAccess) {
+        if(hasAccess){
           localStorage.setItem('userPhone', normPhone);
-          if (loginMessageEl) loginMessageEl.textContent = 'Login successful. Access unlocked ✅';
+          if(loginMessageEl) loginMessageEl.textContent = 'Login successful. Access unlocked ✅';
           document.getElementById('loginModal').classList.add('hidden');
-        } else {
-          if (loginMessageEl) loginMessageEl.textContent = 'Account not confirmed or expired. Please pay again.';
+        }else{
+          if(loginMessageEl) loginMessageEl.textContent = 'Account not confirmed or expired. Please pay again.';
           goToPricing();
         }
       });
-
-      // If user stored phone locally after paying, refresh access-based gating
-      // (library cards will still be rendered; click will be gated)
-    }
-
-
-
-    document.addEventListener('DOMContentLoaded', init);
+    });
   </script>
 </body>
 </html>
+
