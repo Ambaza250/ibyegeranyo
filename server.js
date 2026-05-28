@@ -352,10 +352,13 @@ app.get('/api/me/access', async (req, res) => {
       return res.json({ hasAccess: false, reason: 'NO_ACCOUNT' });
     }
 
-    // Password match check
-    if (!doesPasswordMatch(paymentForPhone, password)) {
-      return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
+    // Password match check (only when password is provided)
+    if (password !== undefined && password !== null && String(password).length > 0) {
+      if (!doesPasswordMatch(paymentForPhone, password)) {
+        return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
+      }
     }
+
 
     // status + expiry check
     const activePayment = paymentForPhone && isPaymentActive(paymentForPhone) ? paymentForPhone : null;
