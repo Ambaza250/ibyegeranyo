@@ -1,4 +1,4 @@
-// server.js - Full Updated Version
+// server.js - FULL UPDATED VERSION (May 2026)
 import express from 'express';
 import path from 'path';
 import fsp from 'fs/promises';
@@ -19,7 +19,7 @@ app.use(express.static(path.resolve(process.cwd())));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
+  limits: { fileSize: 500 * 1024 * 1024 } // 500MB
 });
 
 // ====================== CLOUDINARY ======================
@@ -29,9 +29,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// ====================== FIREBASE FIRESTORE ======================
+// ====================== FIREBASE ADMIN ======================
 const firebaseAdmin = initializeApp({
-  projectId: "ibyegeranyo-6e49b",   // ← Change if your Firebase project ID is different
+  projectId: "ibyegeranyo-6e49b",
 });
 
 const db = getFirestore(firebaseAdmin);
@@ -40,7 +40,7 @@ const db = getFirestore(firebaseAdmin);
 const PAYMENTS_DIR = '/tmp/payments';
 const PAYMENTS_PATH = path.join(PAYMENTS_DIR, 'payments.json');
 
-// ====================== HELPER FUNCTIONS ======================
+// ====================== HELPERS ======================
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
@@ -68,7 +68,7 @@ function computeExpiresAtFromPlan(planType) {
 
   if (p === 'weekly') return new Date(now + 7 * msDay).toISOString();
   if (p === 'yearly') return new Date(now + 365 * msDay).toISOString();
-  return new Date(now + 30 * msDay).toISOString(); // default monthly
+  return new Date(now + 30 * msDay).toISOString(); // monthly default
 }
 
 function isPaymentActive(payment) {
@@ -148,20 +148,26 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
   }
 });
 
-// Screenshot Upload to Cloudinary
+// ====================== SCREENSHOT UPLOAD (Cloudinary + Smart Naming) ======================
 app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, res) => {
   try {
-    const { paymentId } = req.body;
+    const { paymentId, fullName } = req.body;
     const file = req.file;
-    if (!paymentId || !file) return res.status(400).json({ error: 'Missing paymentId or file' });
+    if (!paymentId || !file) {
+      return res.status(400).json({ error: 'Missing paymentId or screenshot file' });
+    }
 
     const payments = await readPayments();
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
 
     const dateStr = new Date().toISOString().slice(0, 10);
-    const cleanName = payment.fullName.replace(/[^a-zA-Z0-9]/g, '-');
-    const publicId = `momo-proofs/${cleanName}-${dateStr}-${paymentId}`;
+    const cleanName = String(fullName || payment.fullName || 'user')
+      .trim()
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .toLowerCase();
+
+    const publicId = `${cleanName}-payment-${dateStr}-${Date.now()}`;
 
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream({
@@ -180,7 +186,11 @@ app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, 
 
     await savePayments(payments);
 
-    res.json({ success: true, screenshotUrl: result.secure_url });
+    res.json({ 
+      success: true, 
+      screenshotUrl: result.secure_url,
+      message: 'Screenshot uploaded successfully'
+    });
   } catch (err) {
     console.error('Upload proof error:', err);
     res.status(500).json({ error: err.message });
@@ -233,6 +243,7 @@ app.get('/api/documentaries', async (req, res) => {
   }
 });
 
+// Upload Documentary → Cloudinary + Firestore
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
   try {
     if (req.cookies.admin !== 'true') {
@@ -265,7 +276,7 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
       title: title.trim(),
       summary: (summary || '').trim(),
       cloudinaryUrl: uploadResult.secure_url,
-      thumbnail: uploadResult.thumbnail_url || uploadResult.secure_url.replace('.mp4', '.jpg'),
+      thumbnail: uploadResult.thumbnail_url || null,
       duration: 'HD',
       uploadedAt: new Date().toISOString()
     };
@@ -283,7 +294,7 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
   }
 });
 
-// Check user subscription access
+// Check user access
 app.get('/api/me/access', async (req, res) => {
   try {
     const { phone } = req.query;
