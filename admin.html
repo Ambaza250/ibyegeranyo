@@ -17,7 +17,7 @@
   </style>
 </head>
 <body class="min-h-screen bg-black text-white">
-      <div class="max-w-4xl mx-auto p-6">
+  <div class="max-w-4xl mx-auto p-6">
 
     <!-- Login -->
     <div id="loginSection" class="glass-card p-8 max-w-md mx-auto mt-20">
@@ -48,339 +48,219 @@
             </div>
             <button id="refreshPaymentsBtn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm">Refresh</button>
           </div>
-
           <div id="paymentList" class="space-y-4"></div>
         </div>
 
         <!-- Upload Documentary -->
         <div class="glass-card p-8">
-          <form id="uploadForm">
-          <div class="mb-6">
-            <label class="block text-sm mb-2">Documentary Title</label>
-            <input type="text" id="title" placeholder="Enter documentary title" class="w-full p-4 bg-zinc-900 rounded-xl" required />
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm mb-2">Summary</label>
-            <textarea id="summary" rows="4" placeholder="Write a short summary..." class="w-full p-4 bg-zinc-900 rounded-xl resize-y"></textarea>
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm mb-2">Video File</label>
-            <input type="file" id="videoFile" accept="video/*" class="w-full p-4 bg-zinc-900 rounded-xl" required />
-          </div>
-
-          <div id="progressContainer" class="hidden mb-4">
-            <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
-              <div id="progressBar" class="h-full bg-red-600 w-0 transition-all"></div>
+          <h2 class="text-xl font-semibold mb-6">Upload New Documentary</h2>
+          <form id="uploadForm" enctype="multipart/form-data">
+            <div class="mb-6">
+              <label class="block text-sm mb-2">Documentary Title</label>
+              <input type="text" id="title" placeholder="Enter documentary title" class="w-full p-4 bg-zinc-900 rounded-xl" required />
             </div>
-            <p id="progressText" class="text-sm text-center mt-1">0%</p>
-          </div>
+            <div class="mb-6">
+              <label class="block text-sm mb-2">Summary</label>
+              <textarea id="summary" rows="4" placeholder="Short summary of the documentary" class="w-full p-4 bg-zinc-900 rounded-xl"></textarea>
+            </div>
+            <div class="mb-8">
+              <label class="block text-sm mb-2">Video File (MP4)</label>
+              <input type="file" id="videoFile" accept="video/*" class="w-full p-4 bg-zinc-900 rounded-xl" required />
+            </div>
+            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-semibold">Upload to Cloudinary</button>
+          </form>
+        </div>
 
-          <button type="submit" id="uploadBtn" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-semibold text-lg">
-            Upload Documentary
-          </button>
-        </form>
       </div>
 
+      <!-- Documentaries List -->
       <div class="mt-10">
-        <h2 class="text-xl font-semibold mb-4">Current Documentaries</h2>
-        <button id="refreshListBtn" class="mb-4 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm">Refresh List</button>
+        <h2 class="text-xl font-semibold mb-4">Uploaded Documentaries</h2>
         <div id="docList" class="space-y-4"></div>
       </div>
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
   <script>
-    // admin.html (Firestore-backed) - payments verification + documentary upload UI
+    // ===============================================
+    // Admin Panel - Updated with Cloudinary + Backend
+    // ===============================================
 
+    const loginSection = document.getElementById('loginSection');
+    const uploadSection = document.getElementById('uploadSection');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
+    const uploadForm = document.getElementById('uploadForm');
 
-const loginSection = document.getElementById('loginSection');
-const uploadSection = document.getElementById('uploadSection');
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-
-const uploadForm = document.getElementById('uploadForm');
-
-// Firebase init
-const firebaseConfig = {
-  apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
-  authDomain: "ibyegeranyo-6e49b.firebaseapp.com",
-  projectId: "ibyegeranyo-6e49b",
-  storageBucket: "ibyegeranyo-6e49b.firebasestorage.app",
-  messagingSenderId: "629430042353",
-  appId: "1:629430042353:web:7bbd7e6549f4b224913350",
-  measurementId: "G-GF146S03X0"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// --- DEBUG: Firestore connectivity ---
-async function __debugFirestore(){
-  try{
-    console.log('[debug] Firebase app initialized:', firebaseConfig.projectId);
-    const pingRef = db.collection('__debug').doc('ping-admin');
-    await pingRef.set({
-      at: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    }, { merge: true });
-    const snap = await pingRef.get();
-    console.log('[debug] Firestore ping (admin) OK. exists=', snap.exists, 'data=', snap.data());
-  }catch(e){
-    console.error('[debug] Firestore ping (admin) failed:', e);
-    alert('Firestore debug write failed on admin page. Check console for the exact error (likely security rules).');
-  }
-}
-
-__debugFirestore();
-
-
-const titleInput = document.getElementById('title');
-const summaryInput = document.getElementById('summary');
-const videoFileInput = document.getElementById('videoFile');
-
-const progressContainer = document.getElementById('progressContainer');
-const progressBar = document.getElementById('progressBar');
-const progressText = document.getElementById('progressText');
-const uploadBtn = document.getElementById('uploadBtn');
-
-const logoutBtn = document.getElementById('logoutBtn');
-const refreshListBtn = document.getElementById('refreshListBtn');
-const docList = document.getElementById('docList');
-
-const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
-const paymentList = document.getElementById('paymentList');
-
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, (c)=>({
-    '&':'&amp;','<':'<','>':'>','"':'"',"'":'&#039;'
-  }[c]));
-}
-
-async function loadPayments(){
-  if(!paymentList) return;
-  paymentList.innerHTML = '';
-
-  // In Firestore mode: scan users and show users with payment.status === 'pending'
-  const usersSnap = await db.collection('users').get();
-  const pending = [];
-  usersSnap.forEach(doc => {
-    const data = doc.data() || {};
-    const pay = data.payment || data.subscription || null;
-    const status = String(pay?.status || '').toLowerCase();
-    if(status === 'pending'){
-      pending.push({
-        phone: doc.id,
-        fullName: pay?.fullName || data.fullName || '',
-        planType: pay?.planType,
-        amount: pay?.amount,
-        createdAt: pay?.createdAt || data.updatedAt || null,
-        screenshotUrl: pay?.screenshotUrl || null,
-        documentaryIds: pay?.documentaryIds || []
-      });
-    }
-  });
-
-  if(pending.length === 0){
-    paymentList.innerHTML = '<p class="text-sm text-zinc-500">No pending payments.</p>';
-    return;
-  }
-
-  paymentList.innerHTML = pending.map(p => {
-    const amountRwf = Number(p.amount || 0);
-    const screenshot = p.screenshotUrl
-      ? `<a href="${p.screenshotUrl}" target="_blank" class="text-red-500 hover:underline font-medium">View proof</a>`
-      : '<span class="text-xs text-zinc-500">No screenshot</span>';
-
-    return `
-      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold text-white">${escapeHtml(p.fullName || '')}</p>
-            <p class="text-xs text-zinc-400 mt-1">Phone: ${escapeHtml(p.phone || '')}</p>
-            <p class="text-xs text-zinc-400 mt-1">Plan: ${escapeHtml(p.planType || '')} • ${amountRwf.toLocaleString()} RWF</p>
-            <p class="text-xs text-zinc-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}</p>
-          </div>
-          <div class="flex flex-col items-end gap-2">
-            ${screenshot}
-            <button data-phone="${escapeHtml(p.phone)}" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold" type="button">Confirm</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  paymentList.querySelectorAll('button[data-phone]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const phone = btn.getAttribute('data-phone');
-      if(!phone) return;
-      const docRef = db.collection('users').doc(phone);
-      const snap = await docRef.get();
-      if(!snap.exists) return;
-      const data = snap.data() || {};
-      const pay = data.payment || data.subscription || {};
-
-      // Confirm & set expiry (client uses store plain planType)
-      const planType = String(pay.planType || '').toLowerCase();
-      const now = Date.now();
-      const msDay = 24*60*60*1000;
-      let endDate;
-      if(planType === 'weekly') endDate = new Date(now + 7*msDay).toISOString();
-      else if(planType === 'yearly') endDate = new Date(now + 365*msDay).toISOString();
-      else if(planType === 'single') endDate = new Date(now + 30*msDay).toISOString();
-      else endDate = new Date(now + 30*msDay).toISOString();
-
-      await docRef.set({
-        updatedAt: new Date().toISOString(),
-        payment: {
-          ...pay,
-          status: 'confirmed',
-          startDate: pay.startDate || new Date().toISOString(),
-          endDate,
-          expiresAt: endDate
+    // ====================== AUTH ======================
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/admin/check');
+        const data = await res.json();
+        if (data.isLoggedIn) {
+          loginSection.classList.add('hidden');
+          uploadSection.classList.remove('hidden');
+          loadPayments();
+          loadDocumentaries();
         }
-      }, { merge: true });
-
-      await loadPayments();
-    });
-  });
-}
-
-async function checkAuth() {
-  // Cookie mode: use backend admin session
-  try {
-    const res = await fetch('/api/admin/me');
-    const data = await res.json().catch(() => ({}));
-    if (data && data.loggedIn) {
-      loginSection.classList.add('hidden');
-      uploadSection.classList.remove('hidden');
-      await loadDocList();
-      await loadPayments();
-      return;
-    }
-  } catch (e) {}
-
-  loginSection.classList.remove('hidden');
-  uploadSection.classList.add('hidden');
-}
-
-loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const username = document.getElementById('adminUser').value;
-  const password = document.getElementById('adminPass').value;
-
-  try {
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.success) throw new Error(data.error || 'Login failed');
-
-    loginError.classList.add('hidden');
-    loginSection.classList.add('hidden');
-    uploadSection.classList.remove('hidden');
-    await loadDocList();
-    await loadPayments();
-  } catch (err) {
-    loginError.textContent = 'Login failed';
-    loginError.classList.remove('hidden');
-  }
-});
-
-logoutBtn.addEventListener('click', async () => {
-  try { await fetch('/api/admin/logout', { method: 'POST' }); } catch {}
-  window.location.reload();
-});
-
-refreshPaymentsBtn?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  loadPayments();
-});
-
-
-uploadForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const title = titleInput.value.trim();
-  const summary = summaryInput.value.trim();
-  const file = videoFileInput.files[0];
-
-  if (!title) return alert("Title is required");
-  if (!file) return alert("Please select a video file");
-
-  uploadBtn.disabled = true;
-  progressContainer.classList.remove('hidden');
-  progressBar.style.width = '0%';
-  progressText.textContent = '0%';
-
-  const formData = new FormData();
-  formData.append('title', title);
-  formData.append('summary', summary);
-  formData.append('video', file);
-
-  try {
-    const res = await fetch('/api/upload-documentary', {
-      method: 'POST',
-      body: formData
-    });
-
-    let data;
-    const text = await res.text();
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("Server returned:", text);
-      throw new Error("Server error - please check server logs");
+      } catch (e) {}
     }
 
-    if (data.success) {
-      alert('✅ Documentary uploaded successfully!');
-      uploadForm.reset();
-      progressContainer.classList.add('hidden');
-      loadDocList();
-    } else {
-      alert('Upload failed: ' + (data.error || 'Unknown error'));
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('adminUser').value.trim();
+      const password = document.getElementById('adminPass').value.trim();
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          loginError.classList.add('hidden');
+          loginSection.classList.add('hidden');
+          uploadSection.classList.remove('hidden');
+          loadPayments();
+          loadDocumentaries();
+        } else {
+          throw new Error(data.error || 'Login failed');
+        }
+      } catch (err) {
+        loginError.textContent = err.message;
+        loginError.classList.remove('hidden');
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      try { await fetch('/api/admin/logout', { method: 'POST' }); } catch {}
+      window.location.reload();
+    });
+
+    // ====================== PAYMENTS ======================
+    async function loadPayments() {
+      try {
+        const res = await fetch('/api/admin/payments');
+        const payments = await res.json();
+        renderPayments(payments);
+      } catch (e) {
+        console.error(e);
+      }
     }
-  } catch (error) {
-    console.error(error);
-    alert('Upload failed: ' + error.message);
-  } finally {
-    uploadBtn.disabled = false;
-  }
-});
 
-async function loadDocList() {
-  try {
-    const res = await fetch('/api/documentaries');
-    const docs = await res.json();
-
-    docList.innerHTML = docs.length === 0 
-      ? '<p class="text-zinc-500">No documentaries yet.</p>'
-      : docs.map(doc => `
-        <div class="glass-card p-5">
-          <h3 class="font-semibold text-lg">${doc.title}</h3>
-          <p class="text-sm text-zinc-400 mt-1">${doc.summary || 'No summary provided.'}</p>
-          <div class="mt-3 flex justify-between items-center">
-            <span class="text-xs text-zinc-500">${new Date(doc.uploadedAt).toLocaleDateString()}</span>
-            <a href="${doc.url}" target="_blank" class="text-red-500 hover:underline font-medium">Watch →</a>
+    function renderPayments(payments) {
+      const container = document.getElementById('paymentList');
+      container.innerHTML = payments.map(p => `
+        <div class="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex-1">
+            <p><strong>${p.fullName}</strong> — ${p.phone}</p>
+            <p class="text-sm text-zinc-400">${p.planType} • ${p.amount} RWF</p>
+          </div>
+          <div>
+            ${p.screenshotUrl ? 
+              `<a href="${p.screenshotUrl}" target="_blank" class="text-blue-400 underline">View Proof</a>` : 
+              `<span class="text-yellow-400">No proof yet</span>`}
+          </div>
+          <div>
+            ${p.status === 'pending' ? `
+              <button onclick="verifyPayment('${p.id}')" 
+                class="bg-green-600 hover:bg-green-700 px-5 py-2 rounded-xl text-sm">
+                Verify
+              </button>` : 
+              `<span class="text-green-400">✓ Confirmed</span>`}
           </div>
         </div>
       `).join('');
-  } catch (e) {
-    docList.innerHTML = '<p class="text-red-500">Failed to load list</p>';
-  }
-}
+    }
 
-refreshListBtn.addEventListener('click', loadDocList);
-checkAuth();
+    window.verifyPayment = async function(paymentId) {
+      if (!confirm("Confirm this payment?")) return;
+      try {
+        await fetch('/api/admin/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId })
+        });
+        loadPayments();
+      } catch (err) {
+        alert("Verification failed");
+      }
+    };
+
+    refreshPaymentsBtn.addEventListener('click', loadPayments);
+
+    // ====================== DOCUMENTARIES ======================
+    async function loadDocumentaries() {
+      try {
+        const res = await fetch('/api/documentaries');
+        const docs = await res.json();
+        renderDocumentaries(docs);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderDocumentaries(docs) {
+      const container = document.getElementById('docList');
+      container.innerHTML = docs.map(doc => `
+        <div class="glass-card p-4 flex gap-4">
+          <img src="${doc.thumbnail || 'https://via.placeholder.com/120x70'}" class="w-28 h-20 object-cover rounded-lg">
+          <div class="flex-1">
+            <h4 class="font-semibold">${doc.title}</h4>
+            <p class="text-sm text-zinc-400 line-clamp-2">${doc.summary}</p>
+            <a href="${doc.cloudinaryUrl}" target="_blank" class="text-blue-400 text-sm mt-2 inline-block hover:underline">
+              Watch Video →
+            </a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Upload Documentary to Cloudinary via Backend
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById('title').value.trim();
+      const summary = document.getElementById('summary').value.trim();
+      const file = document.getElementById('videoFile').files[0];
+
+      if (!title || !file) {
+        alert("Title and video file are required");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('summary', summary);
+      formData.append('video', file);
+
+      try {
+        const res = await fetch('/api/upload-documentary', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert("Documentary uploaded successfully!");
+          uploadForm.reset();
+          loadDocumentaries();
+        } else {
+          alert(data.error || "Upload failed");
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+    });
   </script>
 </body>
 </html>
