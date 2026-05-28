@@ -26,6 +26,14 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Fail fast if Cloudinary credentials are missing
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  // eslint-disable-next-line no-console
+  console.warn('[Cloudinary] Missing credentials. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in environment variables.');
+}
+
+
+
 // Use /tmp for data storage (Vercel compatible)
 const DATA_DIR = '/tmp/documentaries';
 const DATA_PATH = path.join(DATA_DIR, 'data.json');
@@ -72,6 +80,27 @@ function paymentStatusFrom(val) {
   return 'pending';
 }
 
+function computeExpiresAtFromPlan(planType) {
+  const p = String(planType || '').toLowerCase();
+  const now = Date.now();
+  // Basic duration mapping (update later if you want calendar-accurate month ends)
+  if (p === 'weekly') return new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+  if (p === 'yearly') return new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
+  // single documentary still treated as time-based access
+  if (p === 'single') return new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+  // default monthly
+  return new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function isPaymentActive(payment) {
+  if (!payment || payment.status !== 'confirmed') return false;
+  if (!payment.expiresAt) return true; // backward compatibility
+  const exp = new Date(payment.expiresAt).getTime();
+  if (!Number.isFinite(exp)) return false;
+  return exp > Date.now();
+}
+
+
 async function readPayments() {
   try {
     await fsp.mkdir(PAYMENTS_DIR, { recursive: true });
@@ -108,6 +137,7 @@ function computeUsseForMtnMoMo({ phone, amount, momoCode }) {
 
 // Create payment request
 app.post('/api/payments/create', express.json(), async (req, res) => {
+
   try {
     // DEBUG: determine why req.body isn't populated
     // eslint-disable-next-line no-console
@@ -148,7 +178,7 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
     const momoCode = '12345';
     const ussd = computeUsseForMtnMoMo({ phone: normalizedPhone, amount: amtNum, momoCode });
 
-    const record = {
+const record = {
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -165,8 +195,10 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
       status: 'pending',
       ussd,
       screenshotUrl: null,
-      confirmedAt: null
+      confirmedAt: null,
+      expiresAt: null
     };
+
 
     const payments = await readPayments();
     payments.unshift(record);
@@ -240,9 +272,14 @@ app.post('/api/payments/confirm', express.json(), async (req, res) => {
     const idx = payments.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ error: 'Payment not found' });
 
-    payments[idx].status = 'confirmed';
+payments[idx].status = 'confirmed';
     payments[idx].confirmedAt = new Date().toISOString();
     payments[idx].updatedAt = new Date().toISOString();
+    // Set expiry when admin confirms (for backward compatible payments without expiresAt)
+    if (!payments[idx].expiresAt) {
+      payments[idx].expiresAt = computeExpiresAtFromPlan(payments[idx].planType);
+    }
+
 
     await savePayments(payments);
     res.json({ success: true });
@@ -252,14 +289,90 @@ app.post('/api/payments/confirm', express.json(), async (req, res) => {
   }
 });
 
-// Viewer access check (by phone)
+// Viewer login + access (phone + password)
+app.post('/api/viewer/login', express.json(), async (req, res) => {
+  try {
+    const { phone, password } = req.body || {};
+    const p = normalizePhone(phone);
+    const pass = String(password || '');
+
+    if (!p || p.length < 9) return res.status(400).json({ error: 'Valid phone number is required' });
+    if (!pass || pass.length < 1) return res.status(400).json({ error: 'Password is required' });
+
+    const payments = await readPayments();
+
+    const active = payments.find(
+      (pay) => pay.phone === p && pay.status === 'confirmed' && String(pay.momoPassword || '') === pass && isPaymentActive(pay)
+    );
+
+    if (!active) {
+      const pending = payments.find(pay => pay.phone === p && pay.status === 'pending');
+      if (pending) return res.status(403).json({ success: false, reason: 'pending' });
+      return res.status(403).json({ success: false, reason: 'go_pay' });
+    }
+
+    // Session cookie
+    res.cookie('viewer', JSON.stringify({ phone: active.phone }), {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.json({ success: true, expiresAt: active.expiresAt || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Viewer login failed' });
+  }
+});
+
+function getViewerFromCookie(req) {
+  const raw = req.cookies.viewer;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.phone) return { phone: normalizePhone(parsed.phone) };
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+// Viewer me
+app.get('/api/viewer/me', async (req, res) => {
+  try {
+    const viewer = getViewerFromCookie(req);
+    if (!viewer) return res.json({ loggedIn: false, hasAccess: false });
+
+    const payments = await readPayments();
+    const confirmed = payments
+      .filter(p => p.phone === viewer.phone && p.status === 'confirmed')
+      .find(p => isPaymentActive(p));
+
+    if (!confirmed) return res.json({ loggedIn: true, hasAccess: false, reason: 'expired_or_not_approved' });
+
+    res.json({
+      loggedIn: true,
+      hasAccess: true,
+      access: {
+        phone: confirmed.phone,
+        fullName: confirmed.fullName,
+        planType: confirmed.planType,
+        amount: confirmed.amount,
+        expiresAt: confirmed.expiresAt || null,
+        documentaryIds: confirmed.documentaryIds
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to get viewer status' });
+  }
+});
+
+// Backward-compatible endpoint (optional): still supports ?phone= but now respects expiry
 app.get('/api/me/access', async (req, res) => {
   try {
     const phone = normalizePhone(req.query.phone);
     if (!phone) return res.json({ hasAccess: false });
 
     const payments = await readPayments();
-    const confirmed = payments.find(p => p.phone === phone && p.status === 'confirmed');
+    const confirmed = payments.find(p => p.phone === phone && isPaymentActive(p));
 
     if (!confirmed) return res.json({ hasAccess: false });
 
@@ -270,6 +383,7 @@ app.get('/api/me/access', async (req, res) => {
         fullName: confirmed.fullName,
         planType: confirmed.planType,
         amount: confirmed.amount,
+        expiresAt: confirmed.expiresAt || null,
         documentaryIds: confirmed.documentaryIds
       }
     });
@@ -277,6 +391,7 @@ app.get('/api/me/access', async (req, res) => {
     res.status(500).json({ error: err.message || 'Failed to get access' });
   }
 });
+
 
 // Upload Endpoint
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
