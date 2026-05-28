@@ -65,21 +65,24 @@
   </style>
 </head>
 <body class="bg-black text-white min-h-screen pb-20">
-  <!-- Login Modal -->
+
+  <!-- Login Modal (hidden by default; open via Login button) -->
   <div id="loginModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center z-50">
     <div class="glass-card p-8 w-full max-w-md mx-4">
       <h2 class="text-3xl font-bold mb-6 text-center">Murakaza neza</h2>
       <form id="loginForm">
-        <input type="tel" id="phone" placeholder="Phone number (e.g. 0781234567)" class="input mb-4" required />
-        <input type="password" id="password" placeholder="Password" class="input mb-6" required />
+        <input type="tel" id="loginPhone" placeholder="Phone number (e.g. 0781234567)" class="input mb-4" required />
+        <input type="password" id="loginPassword" placeholder="Password" class="input mb-6" required />
         <button type="submit" class="btn-primary w-full py-4 text-lg">Login</button>
       </form>
       <p id="loginMessage" class="text-center mt-4 text-sm"></p>
     </div>
   </div>
+
   <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(200,16,46,0.20),transparent_45%),radial-gradient(ellipse_at_bottom,rgba(15,23,42,0.75),transparent_55%)]"></div>
   <div class="fixed inset-0 pointer-events-none opacity-35 mix-blend-overlay" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27120%27 height=%27120%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter=%27url(%23n)%27 opacity=%270.35%27/%3E%3C/svg%3E');"></div>
   <div class="relative">
+
 
     <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -105,8 +108,11 @@
             <span class="h-2 w-2 rounded-full bg-red-500/80"></span>
             <span id="subscriptionBadgeText">Free</span>
           </span>
+          <button id="navLoginBtn" class="btn btn-ghost px-4 py-2 text-sm">Login</button>
+
           <a id="navSubscribe" href="#pricing" class="btn btn-primary px-4 py-2 text-sm">Subscribe</a>
         </div>
+
       </div>
     </header>
 
@@ -559,7 +565,17 @@
   }
 
 
-  async function initPayFlow(){
+async function initPayFlow(){
+    // Do not allow paying flow when logged in with an active subscription
+    try {
+      const r = await fetch('/api/viewer/me');
+      const data = await r.json().catch(()=>({}));
+      if(data && data.loggedIn && data.hasAccess){
+        const paymentPreview = document.getElementById('proofSection');
+        // keep pay button but locked UI is fine
+      }
+    } catch {}
+
     const payBtn = document.getElementById('momoPayBtn');
     const instructions = document.getElementById('momoInstructions');
     const form = document.getElementById('momoForm');
@@ -717,12 +733,100 @@
   async function init(){
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // We don't know the phone until user pays, so default to locked view.
+    // Default: locked
     setBadge(false);
     renderDocumentaries(false);
 
+    // Login modal elements (only shown when clicking Login)
+    const loginFormEl = document.getElementById('loginForm');
+    const loginModalEl = document.getElementById('loginModal');
+    const loginPhoneEl = document.getElementById('loginPhone');
+    const loginPasswordEl = document.getElementById('loginPassword');
+    const loginMessageEl = document.getElementById('loginMessage');
+
+    const navLoginBtn = document.getElementById('navLoginBtn');
+    navLoginBtn?.addEventListener('click', () => {
+      if(!loginModalEl) return;
+      loginModalEl.classList.remove('hidden');
+    });
+
+    // close modal after successful login or error-free dismiss
+    function setLoginMessage(msg, type){
+      if(!loginMessageEl) return;
+      loginMessageEl.textContent = msg || '';
+      loginMessageEl.style.color = type === 'error' ? 'rgba(220,38,38,0.95)' : 'rgba(134,239,172,0.95)';
+    }
+
+    // Do not auto-open modal on page load; only open via Login button.
+
+    try {
+      const res = await fetch('/api/viewer/me');
+
+      const data = await res.json().catch(()=>({}));
+      if(data && data.loggedIn && data.hasAccess){
+        setBadge(true);
+        renderDocumentaries(true);
+        loginModalEl?.classList.add('hidden');
+      }
+    } catch {}
+
+    loginFormEl?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      setLoginMessage('Checking your subscription…', 'ok');
+      try{
+        const phone = loginPhoneEl?.value?.trim();
+        const password = loginPasswordEl?.value?.trim();
+        if(!phone || !password){
+          setLoginMessage('Phone and password are required', 'error');
+          return;
+        }
+        const r = await fetch('/api/viewer/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, password })
+        });
+
+        const data = await r.json().catch(()=>({}));
+        if(r.ok && data && data.success){
+          loginModalEl?.classList.add('hidden');
+          setLoginMessage('Login successful ✅', 'ok');
+          setBadge(true);
+          renderDocumentaries(true);
+          return;
+        }
+
+        if(data && data.reason === 'pending'){
+          setLoginMessage('Payment is pending approval by admin. Please wait.', 'error');
+          loginModalEl?.classList.remove('hidden');
+          setBadge(false);
+          renderDocumentaries(false);
+          return;
+        }
+
+        if(data && data.reason === 'go_pay'){
+          setLoginMessage('Your subscription is not active. Please go pay to unlock.', 'error');
+          // keep modal open so they can re-login after paying
+          loginModalEl?.classList.remove('hidden');
+          document.getElementById('pricing')?.scrollIntoView({ behavior:'smooth', block:'start' });
+          setBadge(false);
+          renderDocumentaries(false);
+          return;
+        }
+
+        setLoginMessage(data.error || 'Login failed', 'error');
+      }catch(err){
+        setLoginMessage('Login failed', 'error');
+      }
+    });
+
     await initPayFlow();
   }
+
+
+
+
+
+
 
   document.addEventListener('DOMContentLoaded', init);
   </script>
