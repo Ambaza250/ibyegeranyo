@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — Aime Christian</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet" />
+  <style>
++    :root{ --sand:#d6c2a2; --gold:#f5b63a; --red:#dc2626; }
++    *{ color:white; }
++    .glass-card{ background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.10); box-shadow:0 24px 70px rgba(0,0,0,0.6); border-radius:18px; }
++    .input{ width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); padding:12px 14px; color:rgba(255,255,255,0.95); outline:none; transition:border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
++    .input::placeholder{ color:rgba(214,194,162,0.5); }
++    .input:focus{ border-color:rgba(220,38,38,0.55); box-shadow:0 0 0 4px rgba(220,38,38,0.15); background:rgba(255,255,255,0.06); }
++    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:14px; padding:12px 16px; font-weight:700; border:1px solid transparent; transition:transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease; }
++    .btn:active{ transform:translateY(1px); }
++    .btn-primary{ background:linear-gradient(135deg,rgba(220,38,38,0.95),rgba(185,28,28,0.95)); border-color:rgba(255,255,255,0.08); box-shadow:0 18px 45px rgba(220,38,38,0.25); color:white; }
++    .btn-primary:hover{ box-shadow:0 22px 65px rgba(220,38,38,0.33); }
++    .btn-ghost{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); color:rgba(214,194,162,0.95); }
++    .btn-ghost:hover{ background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.18); }
++    .section-title{ display:flex; flex-direction:column; gap:8px; }
++    .label{ font-size:12px; color:rgba(214,194,162,0.85); }
++  </style>
++</head>
++<body class="bg-black text-white min-h-screen pb-20">
++
++  <div class="mx-auto max-w-2xl px-4 sm:px-6 py-10">
++    <header class="mb-6 flex items-center justify-between">
++      <div>
++        <p class="text-sm text-sand/70">Aime Christian</p>
++        <h1 class="text-2xl font-bold">Register</h1>
++      </div>
++      <a href="/" class="btn btn-ghost px-4 py-2 text-sm">Back</a>
++    </header>
++
++    <div class="glass-card p-6 md:p-8">
++      <div class="section-title mb-6">
++        <h2 class="text-2xl md:text-3xl font-semibold">Create your access</h2>
++        <p class="text-sand/70">Enter details, choose tier, send USSD, then upload your payment screenshot.</p>
++      </div>
++
++      <form id="registerForm" class="space-y-5">
++        <div>
++          <label class="label" for="phone">Phone number</label>
++          <input id="phone" class="input mt-2" inputmode="numeric" placeholder="e.g. 0781234567" required />
++        </div>
++
++        <div>
++          <label class="label" for="fullName">Name</label>
++          <input id="fullName" class="input mt-2" placeholder="Your name" required />
++        </div>
++
++        <div>
++          <label class="label" for="accountPassword">Account password (used for login)</label>
++          <input id="accountPassword" type="password" class="input mt-2" placeholder="Create password" required />
++        </div>
++
++        <div>
++          <label class="label" for="tier">Payment tier</label>
++          <select id="tier" class="input mt-2" required>
++            <option value="monthly">200 RWF / month (expires ~ 1 month)</option>
++            <option value="weekly">700 RWF / week (expires 7 days)</option>
++            <option value="single">2000 RWF / 1 documentary (expires ~ 30 days)</option>
++            <option value="yearly">22000 RWF / year (expires 365 days)</option>
++          </select>
++        </div>
++
++        <div class="grid sm:grid-cols-2 gap-4">
++          <div>
++            <label class="label" for="amount">Amount</label>
++            <input id="amount" class="input mt-2" inputmode="numeric" disabled />
++          </div>
++          <div>
++            <label class="label" for="planType">Plan type</label>
++            <input id="planType" class="input mt-2" disabled />
++          </div>
++        </div>
++
++        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
++          <p class="label">USSD (auto-dials & shows to you to dial manually)</p>
++          <div class="mt-2 flex flex-col sm:flex-row gap-3 items-stretch">
++            <input id="ussdCode" class="input flex-1" disabled />
++            <button id="dialBtn" type="button" class="btn btn-primary">Dial now</button>
++          </div>
++          <p class="text-xs text-sand/70 mt-3">If auto-dial is blocked on your device, copy the code above and dial from your phone app.</p>
++        </div>
++
++        <div>
++          <label class="label" for="screenshot">Upload your payment screenshot</label>
++          <input id="screenshot" type="file" accept="image/*" class="input mt-2" required />
++          <p class="text-xs text-sand/70 mt-2">Screenshot will be sent to Cloudinary and named based on your name + phone.</p>
++        </div>
++
++        <input type="hidden" id="paymentId" />
++
++        <div class="flex flex-col sm:flex-row gap-3">
++          <button id="createBtn" type="submit" class="btn btn-primary flex-1">Register & create payment</button>
++          <button id="uploadBtn" type="button" class="btn btn-ghost flex-1">Upload screenshot</button>
++        </div>
++
++        <div id="statusBox" class="hidden rounded-xl border border-white/10 bg-white/5 p-4 text-sm"></div>
++      </form>
++    </div>
++  </div>
++
++  <!-- Firebase SDKs (not strictly needed for this page but kept consistent) -->
++  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
++  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
++
++  <script>
++    const amountField = document.getElementById('amount');
++    const planTypeField = document.getElementById('planType');
++    const tierEl = document.getElementById('tier');
++    const phoneEl = document.getElementById('phone');
++    const ussdCodeEl = document.getElementById('ussdCode');
++    const dialBtn = document.getElementById('dialBtn');
++
++    const statusBox = document.getElementById('statusBox');
++
++    const phoneInputToAmount = (tier) => {
++      switch(String(tier)){
++        case 'monthly': return 200; // as requested
++        case 'weekly': return 700;
++        case 'single': return 2000;
++        case 'yearly': return 22000;
++        default: return 200;
++      }
++    };
++
++    function computeUSSD(phone, amount){
++      // *182*8*1*12345*{amount}#
++      // use fixed short code 12345 from your spec
++      const amt = String(amount);
++      return `*182*8*1*12345*${amt}#`;
++    }
++
++    function showStatus(msg, isError=false){
++      statusBox.classList.remove('hidden');
++      statusBox.style.borderColor = isError ? 'rgba(220,38,38,0.5)' : 'rgba(255,255,255,0.10)';
++      statusBox.style.color = isError ? 'rgba(220,38,38,0.95)' : 'white';
++      statusBox.textContent = msg;
++    }
++
++    function updateTierUI(){
++      const tier = tierEl.value;
++      const amt = phoneInputToAmount(tier);
++      amountField.value = String(amt);
++      planTypeField.value = String(tier);
++      const phone = (phoneEl.value || '').trim();
++      if(phone && phone.length >= 5){
++        ussdCodeEl.value = computeUSSD(phone, amt);
++      } else {
++        ussdCodeEl.value = `*182*8*1*12345*${amt}#`;
++      }
++    }
++
++    tierEl.addEventListener('change', updateTierUI);
++    phoneEl.addEventListener('input', updateTierUI);
++    updateTierUI();
++
++    dialBtn.addEventListener('click', () => {
++      const ussd = ussdCodeEl.value;
++      if(!ussd) return;
++      // Best effort: open telecom URL. Many browsers block it; user can dial manually.
++      window.location.href = `tel:${encodeURIComponent(ussd)}`;
++    });
++
++    function apiFetch(url, options = {}){
++      return fetch(url, {
++        ...options,
++        headers: {
++          ...(options.headers || {})
++        }
++      }).then(async (res) => {
++        const text = await res.text();
++        let data;
++        try { data = text ? JSON.parse(text) : null; } catch { data = { raw:text }; }
++        if(!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
++        return data;
++      });
++    }
++
++    const registerForm = document.getElementById('registerForm');
++    const paymentIdEl = document.getElementById('paymentId');
++    const screenshotEl = document.getElementById('screenshot');
++    const uploadBtn = document.getElementById('uploadBtn');
++    const createBtn = document.getElementById('createBtn');
++
++    registerForm.addEventListener('submit', async (e) => {
++      e.preventDefault();
++
++      const fullName = document.getElementById('fullName').value.trim();
++      const phone = phoneEl.value.trim();
++      const password = document.getElementById('accountPassword').value.trim();
++      const planType = tierEl.value;
++      const amount = amountField.value;
++
++      if(!phone || !fullName || !password){
++        showStatus('Please fill phone, name, password.', true);
++        return;
++      }
++
++      createBtn.disabled = true;
++      try{
++        const res = await apiFetch('/api/payments/create', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            fullName,
++            phone,
++            momoPassword: password,
++            planType,
++            amount
++          })
++        });
++
++        if(res?.success){
++          paymentIdEl.value = res.paymentId;
++          showStatus('Payment created. Upload your screenshot to complete verification ✅');
++          dialBtn.click();
++        } else {
++          throw new Error(res?.error || 'Create payment failed');
++        }
++      }catch(err){
++        console.error(err);
++        showStatus(err.message || 'Failed to create payment', true);
++      }finally{
++        createBtn.disabled = false;
++      }
++    });
++
++    uploadBtn.addEventListener('click', async () => {
++      const paymentId = paymentIdEl.value;
++      const file = screenshotEl.files?.[0];
++      if(!paymentId){ showStatus('Create payment first.', true); return; }
++      if(!file){ showStatus('Select a screenshot first.', true); return; }
++
++      uploadBtn.disabled = true;
++      try{
++        const formData = new FormData();
++        formData.append('paymentId', paymentId);
++        formData.append('fullName', document.getElementById('fullName').value.trim());
++        formData.append('screenshot', file);
++
++        const data = await fetch('/api/payments/upload-proof', { method:'POST', body:formData }).then(r=>r.json());
++        if(data?.success){
++          showStatus('Screenshot uploaded. Admin will verify ✅');
++        } else {
++          throw new Error(data?.error || 'Upload failed');
++        }
++      }catch(err){
++        console.error(err);
++        showStatus(err.message || 'Upload failed', true);
++      }finally{
++        uploadBtn.disabled = false;
++      }
++    });
++  </script>
++</body>
++</html>
+
