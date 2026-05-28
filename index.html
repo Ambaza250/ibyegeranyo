@@ -87,8 +87,8 @@
             <span class="h-2 w-2 rounded-full bg-red-500/80"></span>
             <span id="subscriptionBadgeText">Free</span>
           </span>
-          <button id="navLoginBtn" class="btn btn-ghost px-4 py-2 text-sm">Login</button>
-          <a id="navSubscribe" href="#pricing" class="btn btn-primary px-4 py-2 text-sm">Subscribe</a>
+
+          <a id="navSubscribe" href="#pricing" class="btn btn-ghost px-4 py-2 text-sm">Subscribe / Pay</a>
         </div>
       </div>
     </header>
@@ -193,13 +193,10 @@
         <p class="text-xs text-sand/60 mt-8">© <span id="year"></span> Aime Christian. All rights reserved.</p>
       </div>
     </footer>
-  </div>
+</div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-  <script>
+  <!-- Register Dropdown Modal -->
+  <div id="register
     // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
@@ -264,7 +261,7 @@
       for (const doc of docs) {
         html += `
           <article class="doc-card" data-doc-id="${doc.id}">
-            <div class="doc-thumb" style="background-image:url('${doc.thumbnail || 'https://picsum.photos/600/340'}')"></div>
+            <div class="doc-thumb" style={`background-image: url('${doc.thumbnail}) }></div>
             <div class="p-5 doc-meta">
               <h3 class="text-white font-semibold text-base leading-snug">${doc.title}</h3>
               <p class="text-sm text-sand/80 mt-2 line-clamp-3">${doc.summary || ''}</p>
