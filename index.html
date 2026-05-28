@@ -477,7 +477,29 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
+  // --- DEBUG: Firestore connectivity ---
+  async function __debugFirestore(){
+    try{
+      console.log('[debug] Firebase app initialized:', firebaseConfig.projectId);
+      const pingRef = db.collection('__debug').doc('ping');
+      await pingRef.set({
+        at: new Date().toISOString(),
+        userAgent: navigator.userAgent
+      }, { merge: true });
+      const snap = await pingRef.get();
+      console.log('[debug] Firestore ping write OK. exists=', snap.exists, 'data=', snap.data());
+    }catch(e){
+      console.error('[debug] Firestore ping failed:', e);
+      alert('Firestore debug write failed. Check console for the exact error (likely security rules).');
+    }
+  }
+
+  __debugFirestore();
+
+
+  // NOTE: for production, you should serve this page over http(s), not file://, to avoid iFrame/security-origin warnings.
   // Payment + paywall (Firestore-backed)
+
 
 
   const DOCUMENTARIES = [
@@ -584,7 +606,7 @@
   function buildUSSD(phone, amount){
     // Best-effort automatic dial attempt (current backend pattern)
     const cleaned = String(phone || '').replace(/\D/g,'');
-    return `*182*8*${MO_CODE_PLACEHOLDER}*${cleaned}*${amount}#`;
+    return `*182*8*${MO_CODE_PLACEHOLDER}*${amount}#`;
   }
 
   function buildManualUssd(amount){

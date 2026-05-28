@@ -121,6 +121,26 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// --- DEBUG: Firestore connectivity ---
+async function __debugFirestore(){
+  try{
+    console.log('[debug] Firebase app initialized:', firebaseConfig.projectId);
+    const pingRef = db.collection('__debug').doc('ping-admin');
+    await pingRef.set({
+      at: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    }, { merge: true });
+    const snap = await pingRef.get();
+    console.log('[debug] Firestore ping (admin) OK. exists=', snap.exists, 'data=', snap.data());
+  }catch(e){
+    console.error('[debug] Firestore ping (admin) failed:', e);
+    alert('Firestore debug write failed on admin page. Check console for the exact error (likely security rules).');
+  }
+}
+
+__debugFirestore();
+
+
 const titleInput = document.getElementById('title');
 const summaryInput = document.getElementById('summary');
 const videoFileInput = document.getElementById('videoFile');
@@ -233,34 +253,23 @@ async function loadPayments(){
 }
 
 async function checkAuth() {
-  // Firestore mode: use Firebase Auth admin role via admins/{uid} doc
-  // (If admins collection is missing, admin will be blocked.)
+  // Cookie mode: use backend admin session
   try {
-    const user = await new Promise((resolve) => {
-      const unsub = auth.onAuthStateChanged((u) => {
-        try { unsub(); } catch {}
-        resolve(u);
-      });
-    });
-    if(!user){
-
-      loginSection.classList.remove('hidden');
-      uploadSection.classList.add('hidden');
-      return;
-    }
-
-    const adminSnap = await db.collection('admins').doc(user.uid).get();
-    if(adminSnap.exists){
+    const res = await fetch('/api/admin/me');
+    const data = await res.json().catch(() => ({}));
+    if (data && data.loggedIn) {
       loginSection.classList.add('hidden');
       uploadSection.classList.remove('hidden');
-      loadDocList();
-      loadPayments();
-    } else {
-      loginSection.classList.remove('hidden');
-      uploadSection.classList.add('hidden');
+      await loadDocList();
+      await loadPayments();
+      return;
     }
   } catch (e) {}
+
+  loginSection.classList.remove('hidden');
+  uploadSection.classList.add('hidden');
 }
+
 
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -268,14 +277,15 @@ loginForm.addEventListener('submit', async (e) => {
   const password = document.getElementById('adminPass').value;
 
   try {
-    // Firebase Auth email should match username (recommended).
-    // If you want phone-based admin auth, adjust accordingly.
-    const email = String(username || '').trim();
-    if(!email || !password) throw new Error('Missing credentials');
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Login failed');
 
-    await auth.signInWithEmailAndPassword(email, password);
     loginError.classList.add('hidden');
-
     loginSection.classList.add('hidden');
     uploadSection.classList.remove('hidden');
     await loadDocList();
@@ -287,7 +297,7 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 logoutBtn.addEventListener('click', async () => {
-  try { await auth.signOut(); } catch {}
+  try { await fetch('/api/admin/logout', { method: 'POST' }); } catch {}
   window.location.reload();
 });
 
@@ -295,6 +305,7 @@ refreshPaymentsBtn?.addEventListener('click', (e)=>{
   e.preventDefault();
   loadPayments();
 });
+
 
 uploadForm.addEventListener('submit', async (e) => {
   e.preventDefault();
