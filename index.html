@@ -227,10 +227,12 @@
     }
 
     // Backend access check: paid + not expired
-    async function checkUserAccess(phone) {
+    async function checkUserAccess(phone, password) {
       if (!phone) return false;
       try {
-        const res = await fetch(`/api/me/access?phone=${encodeURIComponent(phone)}`);
+        const qs = new URLSearchParams({ phone });
+        if (password !== undefined) qs.set('password', password);
+        const res = await fetch(`/api/me/access?${qs.toString()}`);
         const data = await res.json();
         return data && data.hasAccess === true;
       } catch (e) {
@@ -238,6 +240,7 @@
         return false;
       }
     }
+
 
 
     // Render dynamic library
@@ -334,6 +337,7 @@
 
         const normPhone = String(phone).replace(/\D/g, '');
         const hasAccess = await checkUserAccess(normPhone, password);
+
 
 
         if (hasAccess) {
