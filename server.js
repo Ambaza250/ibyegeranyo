@@ -1,3 +1,4 @@
+// server.js - Full Updated Version
 import express from 'express';
 import path from 'path';
 import fsp from 'fs/promises';
@@ -18,7 +19,7 @@ app.use(express.static(path.resolve(process.cwd())));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 }
+  limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
 });
 
 // ====================== CLOUDINARY ======================
@@ -28,13 +29,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-  console.warn('[Cloudinary] Missing credentials. Set them in Vercel Environment Variables.');
-}
-
 // ====================== FIREBASE FIRESTORE ======================
 const firebaseAdmin = initializeApp({
-  projectId: "ibyegeranyo-6e49b",   // Change if your project ID is different
+  projectId: "ibyegeranyo-6e49b",   // ← Change if your Firebase project ID is different
 });
 
 const db = getFirestore(firebaseAdmin);
@@ -68,9 +65,10 @@ function computeExpiresAtFromPlan(planType) {
   const p = String(planType || '').toLowerCase();
   const now = Date.now();
   const msDay = 24 * 60 * 60 * 1000;
+
   if (p === 'weekly') return new Date(now + 7 * msDay).toISOString();
   if (p === 'yearly') return new Date(now + 365 * msDay).toISOString();
-  return new Date(now + 30 * msDay).toISOString(); // default 30 days
+  return new Date(now + 30 * msDay).toISOString(); // default monthly
 }
 
 function isPaymentActive(payment) {
@@ -150,7 +148,7 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
   }
 });
 
-// Screenshot Upload to Cloudinary with better naming
+// Screenshot Upload to Cloudinary
 app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, res) => {
   try {
     const { paymentId } = req.body;
@@ -189,7 +187,34 @@ app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, 
   }
 });
 
-// ====================== DOCUMENTARIES (Firestore) ======================
+// ====================== ADMIN ROUTES ======================
+app.get('/api/admin/payments', async (req, res) => {
+  if (req.cookies.admin !== 'true') return res.status(401).json({ error: 'Unauthorized' });
+  
+  const payments = await readPayments();
+  res.json(payments);
+});
+
+app.post('/api/admin/verify-payment', express.json(), async (req, res) => {
+  if (req.cookies.admin !== 'true') return res.status(401).json({ error: 'Unauthorized' });
+
+  const { paymentId } = req.body;
+  if (!paymentId) return res.status(400).json({ error: 'Payment ID required' });
+
+  const payments = await readPayments();
+  const payment = payments.find(p => p.id === paymentId);
+
+  if (payment) {
+    payment.status = 'confirmed';
+    payment.confirmedAt = new Date().toISOString();
+    await savePayments(payments);
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Payment not found' });
+  }
+});
+
+// ====================== DOCUMENTARIES ======================
 app.get('/api/documentaries', async (req, res) => {
   try {
     const snapshot = await db.collection('documentaries')
@@ -258,7 +283,7 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
   }
 });
 
-// Check user access
+// Check user subscription access
 app.get('/api/me/access', async (req, res) => {
   try {
     const { phone } = req.query;
