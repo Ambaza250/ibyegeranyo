@@ -3,264 +3,305 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — Aime Christian</title>
+  <title>Aime Christian Documentaries</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <meta name="robots" content="noindex" />
-  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet" />
+
   <style>
-    body { background: #0a0a0a; color: white; }
-    .glass-card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 18px;
-    }
+    :root{ --sand:#d6c2a2; --gold:#f5b63a; --red:#dc2626; }
+    *{ color:white; }
+
+    .hero-title{ font-family:'Fraunces', serif; font-weight:600; font-size:clamp(2rem,3.4vw,3.2rem); line-height:1.02; letter-spacing:-0.02em; text-shadow:0 18px 55px rgba(0,0,0,0.75); }
+    .hero-sub{ color:rgba(214,194,162,0.92); font-size:0.98rem; line-height:1.6; max-width:52ch; }
+    .section-title{ display:flex; flex-direction:column; gap:8px; }
+    .glass-card{ background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.10); box-shadow:0 24px 70px rgba(0,0,0,0.6); border-radius:18px; }
+
+    .nav-link{ position:relative; color:rgba(214,194,162,0.8); transition:color 160ms ease; }
+    .nav-link::after{ content:''; position:absolute; left:0; bottom:-10px; width:0; height:2px; background:rgba(220,38,38,0.9); transition:width 220ms ease; }
+    .nav-link:hover{ color:rgba(255,255,255,0.95); }
+    .nav-link:hover::after{ width:100%; }
+
+    .btn{ display:inline-flex; align-items:center; gap:10px; border-radius:14px; padding:12px 16px; font-weight:600; border:1px solid transparent; transition:transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ background:linear-gradient(135deg,rgba(220,38,38,0.95),rgba(185,28,28,0.95)); border-color:rgba(255,255,255,0.08); box-shadow:0 18px 45px rgba(220,38,38,0.25); color:white; }
+    .btn-primary:hover{ box-shadow:0 22px 65px rgba(220,38,38,0.33); }
+    .btn-ghost{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); color:rgba(214,194,162,0.95); }
+    .btn-ghost:hover{ background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.18); }
+
+    .input{ width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); padding:12px 14px; color:rgba(255,255,255,0.95); outline:none; transition:border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+    .input::placeholder{ color:rgba(214,194,162,0.5); }
+    .input:focus{ border-color:rgba(220,38,38,0.55); box-shadow:0 0 0 4px rgba(220,38,38,0.15); background:rgba(255,255,255,0.06); }
+
+    .doc-card{ border-radius:18px; border:1px solid rgba(255,255,255,0.10); background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); overflow:hidden; transition:transform 220ms ease, border-color 220ms ease; }
+    .doc-card:hover{ transform:translateY(-4px); border-color:rgba(220,38,38,0.35); }
+    .doc-thumb{ position:relative; height:180px; background-size:cover; background-position:center; }
+    .doc-thumb::after{ content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.12)); }
+    .doc-meta{ position:relative; z-index:2; }
+
+    #docGrid{ display:flex; gap:20px; overflow-x:auto; padding-bottom:20px; scrollbar-width:thin; }
+    #docGrid > .doc-card{ width: 330px; flex: 0 0 auto; }
+
+    @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
   </style>
 </head>
-<body class="min-h-screen bg-black text-white">
-  <div class="max-w-4xl mx-auto p-6">
+<body class="bg-black text-white min-h-screen pb-20">
 
-    <!-- Login -->
-    <div id="loginSection" class="glass-card p-8 max-w-md mx-auto mt-20">
-      <h1 class="text-3xl font-bold text-center mb-8">Admin Login</h1>
+  <!-- Login Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center z-50">
+    <div class="glass-card p-8 w-full max-w-md mx-4">
+      <h2 class="text-3xl font-bold mb-6 text-center">Murakaza neza</h2>
       <form id="loginForm">
-        <input type="text" id="adminUser" placeholder="Username" class="w-full mb-4 p-4 bg-zinc-900 rounded-xl" required />
-        <input type="password" id="adminPass" placeholder="Password" class="w-full mb-6 p-4 bg-zinc-900 rounded-xl" required />
-        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-semibold">Login</button>
+        <input type="tel" id="loginPhone" placeholder="Phone number (e.g. 0781234567)" class="input mb-4" required />
+        <input type="password" id="loginPassword" placeholder="Password" class="input mb-6" required />
+        <button type="submit" class="btn-primary w-full py-4 text-lg">Login</button>
       </form>
-      <p id="loginError" class="text-red-500 text-center mt-4 hidden"></p>
-    </div>
-
-    <!-- Admin Main -->
-    <div id="uploadSection" class="hidden">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <h1 class="text-3xl font-bold">Admin</h1>
-        <button id="logoutBtn" class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl">Logout</button>
-      </div>
-
-      <div class="grid lg:grid-cols-2 gap-6">
-
-        <!-- Payment verification -->
-        <div class="glass-card p-6">
-          <div class="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h2 class="text-xl font-semibold">Verify Payments</h2>
-              <p class="text-sm text-zinc-400 mt-1">Confirm pending MoMo registrations to grant access.</p>
-            </div>
-            <button id="refreshPaymentsBtn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm">Refresh</button>
-          </div>
-          <div id="paymentList" class="space-y-4"></div>
-        </div>
-
-        <!-- Upload Documentary -->
-        <div class="glass-card p-8">
-          <h2 class="text-xl font-semibold mb-6">Upload New Documentary</h2>
-          <form id="uploadForm" enctype="multipart/form-data">
-            <div class="mb-6">
-              <label class="block text-sm mb-2">Documentary Title</label>
-              <input type="text" id="title" placeholder="Enter documentary title" class="w-full p-4 bg-zinc-900 rounded-xl" required />
-            </div>
-            <div class="mb-6">
-              <label class="block text-sm mb-2">Summary</label>
-              <textarea id="summary" rows="4" placeholder="Short summary of the documentary" class="w-full p-4 bg-zinc-900 rounded-xl"></textarea>
-            </div>
-            <div class="mb-8">
-              <label class="block text-sm mb-2">Video File (MP4)</label>
-              <input type="file" id="videoFile" accept="video/*" class="w-full p-4 bg-zinc-900 rounded-xl" required />
-            </div>
-            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-semibold">Upload to Cloudinary</button>
-          </form>
-        </div>
-
-      </div>
-
-      <!-- Documentaries List -->
-      <div class="mt-10">
-        <h2 class="text-xl font-semibold mb-4">Uploaded Documentaries</h2>
-        <div id="docList" class="space-y-4"></div>
-      </div>
+      <p id="loginMessage" class="text-center mt-4 text-sm"></p>
     </div>
   </div>
 
-  <script>
-    // ===============================================
-    // Admin Panel - Updated with Cloudinary + Backend
-    // ===============================================
+  <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(200,16,46,0.20),transparent_45%),radial-gradient(ellipse_at_bottom,rgba(15,23,42,0.75),transparent_55%)]"></div>
 
-    const loginSection = document.getElementById('loginSection');
-    const uploadSection = document.getElementById('uploadSection');
-    const loginForm = document.getElementById('loginForm');
-    const loginError = document.getElementById('loginError');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
-    const uploadForm = document.getElementById('uploadForm');
+  <div class="relative">
 
-    // ====================== AUTH ======================
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/admin/check');
-        const data = await res.json();
-        if (data.isLoggedIn) {
-          loginSection.classList.add('hidden');
-          uploadSection.classList.remove('hidden');
-          loadPayments();
-          loadDocumentaries();
-        }
-      } catch (e) {}
-    }
-
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const username = document.getElementById('adminUser').value.trim();
-      const password = document.getElementById('adminPass').value.trim();
-
-      try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          loginError.classList.add('hidden');
-          loginSection.classList.add('hidden');
-          uploadSection.classList.remove('hidden');
-          loadPayments();
-          loadDocumentaries();
-        } else {
-          throw new Error(data.error || 'Login failed');
-        }
-      } catch (err) {
-        loginError.textContent = err.message;
-        loginError.classList.remove('hidden');
-      }
-    });
-
-    logoutBtn.addEventListener('click', async () => {
-      try { await fetch('/api/admin/logout', { method: 'POST' }); } catch {}
-      window.location.reload();
-    });
-
-    // ====================== PAYMENTS ======================
-    async function loadPayments() {
-      try {
-        const res = await fetch('/api/admin/payments');
-        const payments = await res.json();
-        renderPayments(payments);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    function renderPayments(payments) {
-      const container = document.getElementById('paymentList');
-      container.innerHTML = payments.map(p => `
-        <div class="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="flex-1">
-            <p><strong>${p.fullName}</strong> — ${p.phone}</p>
-            <p class="text-sm text-zinc-400">${p.planType} • ${p.amount} RWF</p>
+    <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl border border-red-500/50 bg-gradient-to-br from-red-950/60 to-black flex items-center justify-center">
+            <span class="text-red-200 font-semibold">A</span>
           </div>
           <div>
-            ${p.screenshotUrl ? 
-              `<a href="${p.screenshotUrl}" target="_blank" class="text-blue-400 underline">View Proof</a>` : 
-              `<span class="text-yellow-400">No proof yet</span>`}
-          </div>
-          <div>
-            ${p.status === 'pending' ? `
-              <button onclick="verifyPayment('${p.id}')" 
-                class="bg-green-600 hover:bg-green-700 px-5 py-2 rounded-xl text-sm">
-                Verify
-              </button>` : 
-              `<span class="text-green-400">✓ Confirmed</span>`}
+            <p class="font-semibold tracking-wide text-white">Aime Christian</p>
+            <p class="text-xs text-sand/70">Independent Documentary Maker</p>
           </div>
         </div>
-      `).join('');
-    }
 
-    window.verifyPayment = async function(paymentId) {
-      if (!confirm("Confirm this payment?")) return;
-      try {
-        await fetch('/api/admin/verify-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentId })
-        });
-        loadPayments();
-      } catch (err) {
-        alert("Verification failed");
-      }
+        <nav class="hidden md:flex items-center gap-7 text-sm">
+          <a href="#about" class="nav-link">About</a>
+          <a href="#library" class="nav-link">Documentaries</a>
+          <a href="#pricing" class="nav-link">Pricing</a>
+          <a href="#how" class="nav-link">How it works</a>
+        </nav>
+
+        <div class="flex items-center gap-3">
+          <span id="subscriptionBadge" class="hidden md:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-sand/80">
+            <span class="h-2 w-2 rounded-full bg-red-500/80"></span>
+            <span id="subscriptionBadgeText">Free</span>
+          </span>
+          <button id="navLoginBtn" class="btn btn-ghost px-4 py-2 text-sm">Login</button>
+          <a id="navSubscribe" href="#pricing" class="btn btn-primary px-4 py-2 text-sm">Subscribe</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0">
+        <div class="h-full w-full opacity-90" style="background-image:url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&w=1600&q=70'); background-size:cover; background-position:center;"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/65 to-black"></div>
+      </div>
+
+      <div class="relative mx-auto max-w-6xl px-4 sm:px-6 pt-16 pb-10">
+        <div class="grid md:grid-cols-2 gap-10 items-center">
+          <div class="space-y-6">
+            <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-sand/85">
+              <span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+              <span>Rwanda stories • Investigations • Ad-free</span>
+            </div>
+
+            <h1 class="hero-title">
+              Watch <span class="text-gold">Aime Christian</span> Documentaries Ad-Free
+            </h1>
+            <p class="hero-sub">
+              Premium access to uncut, advertisement-free Rwandan stories and investigations.
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <a href="#pricing" class="btn btn-primary">Subscribe for 2,000 RWF/month</a>
+              <a href="#library" class="btn btn-ghost">Explore the library</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIBRARY SECTION - DYNAMIC FROM FIRESTORE -->
+    <section id="library" class="mx-auto max-w-6xl px-4 sm:px-6 py-16">
+      <div class="section-title mb-10">
+        <h2 class="text-3xl font-semibold">Our Documentaries</h2>
+        <p class="text-sand/70">Subscribe to unlock full access</p>
+      </div>
+
+      <div id="docGrid" class="flex gap-6 overflow-x-auto pb-8"></div>
+
+      <div id="libraryEmpty" class="hidden text-center py-12 text-sand/60">
+        No documentaries available yet.
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="mx-auto max-w-6xl px-4 sm:px-6 py-14">
+      <div class="section-title">
+        <h2 class="text-2xl md:text-3xl font-semibold text-white">About Aime Christian</h2>
+        <p class="text-sand/70">Murakaza neza — welcome to premium documentary access.</p>
+      </div>
+      <!-- (Your original about content) -->
+      <div class="grid md:grid-cols-5 gap-8 items-start mt-8">
+        <div class="md:col-span-2">
+          <div class="glass-card p-6">
+            <p class="text-sm md:text-base text-sand/85 leading-relaxed">
+              Aime Christian is a Rwandan Independent Documentary Maker.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="mx-auto max-w-6xl px-4 sm:px-6 py-14">
+      <!-- Keep your full original pricing section here (unchanged) -->
+      <div class="section-title">
+        <h2 class="text-2xl md:text-3xl font-semibold text-white">Pricing & Paywall</h2>
+        <p class="text-sand/70">2,000 RWF/month. Cancel anytime.</p>
+      </div>
+      <!-- ... paste your full pricing HTML if needed ... -->
+      <div class="glass-card p-8 text-center">
+        <button id="momoPayBtn" class="btn btn-primary w-full max-w-md mx-auto">Pay with MTN MoMo</button>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="mx-auto max-w-6xl px-4 sm:px-6 py-14">
+      <div class="section-title">
+        <h2 class="text-2xl md:text-3xl font-semibold">How It Works</h2>
+      </div>
+      <!-- Your original steps -->
+    </section>
+
+    <footer class="border-t border-white/5 bg-black/70 backdrop-blur">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-10">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <p class="font-semibold text-white">Aime Christian</p>
+            <p class="text-xs text-sand/70 mt-1">Premium documentary subscriptions — ad-free.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-4">
+            <a href="https://www.youtube.com/@Aimechristian01" target="_blank" class="social">YouTube</a>
+            <a href="https://www.instagram.com/aimechristian01/" target="_blank" class="social">Instagram</a>
+            <a href="./admin.html" class="social">Admin</a>
+          </div>
+        </div>
+        <p class="text-xs text-sand/60 mt-8">© <span id="year"></span> Aime Christian. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
+      authDomain: "ibyegeranyo-6e49b.firebaseapp.com",
+      projectId: "ibyegeranyo-6e49b",
+      storageBucket: "ibyegeranyo-6e49b.firebasestorage.app",
+      messagingSenderId: "629430042353",
+      appId: "1:629430042353:web:7bbd7e6549f4b224913350"
     };
 
-    refreshPaymentsBtn.addEventListener('click', loadPayments);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    // ====================== DOCUMENTARIES ======================
-    async function loadDocumentaries() {
+    // Fetch documentaries from Firestore
+    async function fetchDocumentaries() {
       try {
-        const res = await fetch('/api/documentaries');
-        const docs = await res.json();
-        renderDocumentaries(docs);
+        const snapshot = await db.collection('documentaries')
+          .orderBy('uploadedAt', 'desc')
+          .get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (e) {
+        console.error("Error fetching documentaries:", e);
+        return [];
+      }
+    }
+
+    // Check if user has active subscription
+    async function checkUserAccess(phone) {
+      if (!phone) return false;
+      try {
+        const normPhone = String(phone).replace(/\D/g, '');
+        const userSnap = await db.collection('users').doc(normPhone).get();
+        if (!userSnap.exists) return false;
+
+        const data = userSnap.data();
+        const pay = data.payment || data.subscription || {};
+        if (pay.status !== 'confirmed') return false;
+
+        const expires = new Date(pay.expiresAt || pay.endDate).getTime();
+        return expires > Date.now();
       } catch (e) {
         console.error(e);
+        return false;
       }
     }
 
-    function renderDocumentaries(docs) {
-      const container = document.getElementById('docList');
-      container.innerHTML = docs.map(doc => `
-        <div class="glass-card p-4 flex gap-4">
-          <img src="${doc.thumbnail || 'https://via.placeholder.com/120x70'}" class="w-28 h-20 object-cover rounded-lg">
-          <div class="flex-1">
-            <h4 class="font-semibold">${doc.title}</h4>
-            <p class="text-sm text-zinc-400 line-clamp-2">${doc.summary}</p>
-            <a href="${doc.cloudinaryUrl}" target="_blank" class="text-blue-400 text-sm mt-2 inline-block hover:underline">
-              Watch Video →
-            </a>
-          </div>
-        </div>
-      `).join('');
-    }
+    // Render dynamic library
+    async function renderDocumentaries() {
+      const grid = document.getElementById('docGrid');
+      const empty = document.getElementById('libraryEmpty');
+      const phone = localStorage.getItem('viewer_phone') || '';
+      const hasAccess = await checkUserAccess(phone);
 
-    // Upload Documentary to Cloudinary via Backend
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
+      const docs = await fetchDocumentaries();
 
-      const title = document.getElementById('title').value.trim();
-      const summary = document.getElementById('summary').value.trim();
-      const file = document.getElementById('videoFile').files[0];
-
-      if (!title || !file) {
-        alert("Title and video file are required");
+      if (docs.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
         return;
       }
+      empty.classList.add('hidden');
 
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('summary', summary);
-      formData.append('video', file);
-
-      try {
-        const res = await fetch('/api/upload-documentary', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          alert("Documentary uploaded successfully!");
-          uploadForm.reset();
-          loadDocumentaries();
-        } else {
-          alert(data.error || "Upload failed");
-        }
-      } catch (err) {
-        alert("Error: " + err.message);
+      let html = '';
+      for (const doc of docs) {
+        html += `
+          <article class="doc-card" data-doc-id="${doc.id}">
+            <div class="doc-thumb" style="background-image:url('${doc.thumbnail || 'https://picsum.photos/600/340'}')"></div>
+            <div class="p-5 doc-meta">
+              <h3 class="text-white font-semibold text-base leading-snug">${doc.title}</h3>
+              <p class="text-sm text-sand/80 mt-2 line-clamp-3">${doc.summary || ''}</p>
+              <div class="mt-5">
+                ${hasAccess 
+                  ? `<div class="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black">
+                       <iframe src="${doc.cloudinaryUrl}" class="w-full h-full" allowfullscreen frameborder="0" allow="autoplay"></iframe>
+                     </div>`
+                  : `<button onclick="goToPricing()" class="btn btn-primary w-full justify-center text-sm">Subscribe to Watch</button>`
+                }
+              </div>
+            </div>
+          </article>`;
       }
-    });
+      grid.innerHTML = html;
+    }
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      checkAuth();
-    });
+    function goToPricing() {
+      document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Initialize everything
+    async function init() {
+      document.getElementById('year').textContent = new Date().getFullYear();
+      await renderDocumentaries();
+
+      // Login button
+      document.getElementById('navLoginBtn').addEventListener('click', () => {
+        document.getElementById('loginModal').classList.remove('hidden');
+      });
+
+      // Existing payment / login logic can stay or be added here
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
