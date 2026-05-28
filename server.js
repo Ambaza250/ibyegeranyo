@@ -30,11 +30,37 @@ cloudinary.config({
 });
 
 // ====================== FIREBASE ADMIN ======================
+// IMPORTANT: In local/dev environments, firebase-admin must be initialized with
+// service account credentials (otherwise Google ADC lookup fails).
+//
+// Option A (recommended for Vercel): set GOOGLE_APPLICATION_CREDENTIALS_JSON to the full
+// service account JSON string.
+function getFirebaseServiceAccountFromEnv() {
+  const jsonString = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (!jsonString) {
+    return null;
+  }
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return null;
+  }
+}
+
+import { cert } from 'firebase-admin/app';
+
+const serviceAccount = getFirebaseServiceAccountFromEnv();
+
 const firebaseAdmin = initializeApp({
-  projectId: "ibyegeranyo-6e49b",
+  projectId: 'ibyegeranyo-6e49b',
+  credential: serviceAccount ? cert(serviceAccount) : undefined
 });
 
+
+
+
 const db = getFirestore(firebaseAdmin);
+
 
 // ====================== DATA PATHS ======================
 const PAYMENTS_DIR = '/tmp/payments';
