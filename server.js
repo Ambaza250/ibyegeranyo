@@ -103,6 +103,14 @@ function isPaymentActive(payment) {
   return new Date(payment.expiresAt).getTime() > Date.now();
 }
 
+function doesPasswordMatch(payment, password) {
+  if (!payment) return false;
+  if (!password) return false;
+  // Payment record stores momoPassword; for login we treat it as the password.
+  return String(payment.momoPassword) === String(password);
+}
+
+
 // ====================== ROUTES ======================
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.resolve(process.cwd(), 'admin.html')));
@@ -324,24 +332,44 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
   }
 });
 
-// Check user access
+// Check user access (login gate)
+// metrics:
+// 1) number exists => matching record for phone
+// 2) password matches => payment.momoPassword === password
+// 3) status confirmed => payment.status === 'confirmed'
+// 4) not expired => payment.expiresAt in the future
 app.get('/api/me/access', async (req, res) => {
   try {
-    const { phone } = req.query;
+    const { phone, password } = req.query;
     if (!phone) return res.json({ hasAccess: false });
 
     const normalizedPhone = normalizePhone(phone);
     const payments = await readPayments();
 
-    const activePayment = payments.find(p => 
-      p.phone === normalizedPhone && isPaymentActive(p)
-    );
+    // Find any record for the phone (number exists check)
+    const paymentForPhone = payments.find(p => p.phone === normalizedPhone);
+    if (!paymentForPhone) {
+      return res.json({ hasAccess: false, reason: 'NO_ACCOUNT' });
+    }
 
-    res.json({ hasAccess: !!activePayment });
+    // Password match check
+    if (!doesPasswordMatch(paymentForPhone, password)) {
+      return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
+    }
+
+    // status + expiry check
+    const activePayment = paymentForPhone && isPaymentActive(paymentForPhone) ? paymentForPhone : null;
+    if (!activePayment) {
+      return res.json({ hasAccess: false, reason: 'NOT_ACTIVE' });
+    }
+
+    return res.json({ hasAccess: true });
   } catch (e) {
+    console.error('me/access error:', e);
     res.json({ hasAccess: false });
   }
 });
+
 
 app.listen(APP_PORT, () => {
   console.log(`🚀 Server running on port ${APP_PORT}`);
