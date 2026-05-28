@@ -226,25 +226,19 @@
       }
     }
 
-    // Check if user has active subscription
+    // Backend access check: paid + not expired
     async function checkUserAccess(phone) {
       if (!phone) return false;
       try {
-        const normPhone = String(phone).replace(/\D/g, '');
-        const userSnap = await db.collection('users').doc(normPhone).get();
-        if (!userSnap.exists) return false;
-
-        const data = userSnap.data();
-        const pay = data.payment || data.subscription || {};
-        if (pay.status !== 'confirmed') return false;
-
-        const expires = new Date(pay.expiresAt || pay.endDate).getTime();
-        return expires > Date.now();
+        const res = await fetch(`/api/me/access?phone=${encodeURIComponent(phone)}`);
+        const data = await res.json();
+        return data && data.hasAccess === true;
       } catch (e) {
         console.error(e);
         return false;
       }
     }
+
 
     // Render dynamic library
     // fetch docs & always render them; gate playback on click by checking /api/me/access
