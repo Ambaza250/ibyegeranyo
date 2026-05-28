@@ -262,7 +262,7 @@ app.post('/api/admin/verify-payment', express.json(), async (req, res) => {
   }
 });
 
-// ====================== DOCUMENTARIES ======================
+// ====================== DOCUMENTARIES (Firestore) ======================
 app.get('/api/documentaries', async (req, res) => {
   try {
     const snapshot = await db.collection('documentaries')
