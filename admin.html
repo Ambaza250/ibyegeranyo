@@ -91,8 +91,13 @@
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
-    // admin.html (inline) - payments verification support added
+    // admin.html (Firestore-backed) - payments verification + documentary upload UI
+
 
 const loginSection = document.getElementById('loginSection');
 const uploadSection = document.getElementById('uploadSection');
@@ -100,6 +105,22 @@ const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
 
 const uploadForm = document.getElementById('uploadForm');
+
+// Firebase init
+const firebaseConfig = {
+  apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
+  authDomain: "ibyegeranyo-6e49b.firebaseapp.com",
+  projectId: "ibyegeranyo-6e49b",
+  storageBucket: "ibyegeranyo-6e49b.firebasestorage.app",
+  messagingSenderId: "629430042353",
+  appId: "1:629430042353:web:7bbd7e6549f4b224913350",
+  measurementId: "G-GF146S03X0"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 const titleInput = document.getElementById('title');
 const summaryInput = document.getElementById('summary');
 const videoFileInput = document.getElementById('videoFile');
@@ -126,9 +147,25 @@ async function loadPayments(){
   if(!paymentList) return;
   paymentList.innerHTML = '';
 
-  const res = await fetch('/api/payments');
-  const data = await res.json();
-  const pending = Array.isArray(data) ? data.filter(p => p.status === 'pending') : [];
+  // In Firestore mode: scan users and show users with payment.status === 'pending'
+  const usersSnap = await db.collection('users').get();
+  const pending = [];
+  usersSnap.forEach(doc => {
+    const data = doc.data() || {};
+    const pay = data.payment || data.subscription || null;
+    const status = String(pay?.status || '').toLowerCase();
+    if(status === 'pending'){
+      pending.push({
+        phone: doc.id,
+        fullName: pay?.fullName || data.fullName || '',
+        planType: pay?.planType,
+        amount: pay?.amount,
+        createdAt: pay?.createdAt || data.updatedAt || null,
+        screenshotUrl: pay?.screenshotUrl || null,
+        documentaryIds: pay?.documentaryIds || []
+      });
+    }
+  });
 
   if(pending.length === 0){
     paymentList.innerHTML = '<p class="text-sm text-zinc-500">No pending payments.</p>';
@@ -149,39 +186,78 @@ async function loadPayments(){
             <p class="text-xs text-zinc-400 mt-1">Phone: ${escapeHtml(p.phone || '')}</p>
             <p class="text-xs text-zinc-400 mt-1">Plan: ${escapeHtml(p.planType || '')} • ${amountRwf.toLocaleString()} RWF</p>
             <p class="text-xs text-zinc-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}</p>
-            ${p.docId ? `<p class="text-xs text-zinc-500 mt-1">Documentary: ${escapeHtml(p.docTitle || p.docId)}</p>` : ''}
           </div>
           <div class="flex flex-col items-end gap-2">
             ${screenshot}
-            <button data-confirm-payment-id="${escapeHtml(p.id)}" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold" type="button">Confirm</button>
+            <button data-phone="${escapeHtml(p.phone)}" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold" type="button">Confirm</button>
           </div>
         </div>
       </div>
     `;
   }).join('');
 
-  paymentList.querySelectorAll('button[data-confirm-payment-id]').forEach(btn => {
+  paymentList.querySelectorAll('button[data-phone]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-confirm-payment-id');
-      await fetch('/api/payments/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId: id })
-      });
+      const phone = btn.getAttribute('data-phone');
+      if(!phone) return;
+      const docRef = db.collection('users').doc(phone);
+      const snap = await docRef.get();
+      if(!snap.exists) return;
+      const data = snap.data() || {};
+      const pay = data.payment || data.subscription || {};
+
+      // Confirm & set expiry (client uses store plain planType)
+      const planType = String(pay.planType || '').toLowerCase();
+      const now = Date.now();
+      const msDay = 24*60*60*1000;
+      let endDate;
+      if(planType === 'weekly') endDate = new Date(now + 7*msDay).toISOString();
+      else if(planType === 'yearly') endDate = new Date(now + 365*msDay).toISOString();
+      else if(planType === 'single') endDate = new Date(now + 30*msDay).toISOString();
+      else endDate = new Date(now + 30*msDay).toISOString();
+
+      await docRef.set({
+        updatedAt: new Date().toISOString(),
+        payment: {
+          ...pay,
+          status: 'confirmed',
+          startDate: pay.startDate || new Date().toISOString(),
+          endDate,
+          expiresAt: endDate
+        }
+      }, { merge: true });
+
       await loadPayments();
     });
   });
 }
 
 async function checkAuth() {
+  // Firestore mode: use Firebase Auth admin role via admins/{uid} doc
+  // (If admins collection is missing, admin will be blocked.)
   try {
-    const res = await fetch('/api/admin/check');
-    const data = await res.json();
-    if (data.isLoggedIn) {
+    const user = await new Promise((resolve) => {
+      const unsub = auth.onAuthStateChanged((u) => {
+        try { unsub(); } catch {}
+        resolve(u);
+      });
+    });
+    if(!user){
+
+      loginSection.classList.remove('hidden');
+      uploadSection.classList.add('hidden');
+      return;
+    }
+
+    const adminSnap = await db.collection('admins').doc(user.uid).get();
+    if(adminSnap.exists){
       loginSection.classList.add('hidden');
       uploadSection.classList.remove('hidden');
       loadDocList();
       loadPayments();
+    } else {
+      loginSection.classList.remove('hidden');
+      uploadSection.classList.add('hidden');
     }
   } catch (e) {}
 }
@@ -192,22 +268,18 @@ loginForm.addEventListener('submit', async (e) => {
   const password = document.getElementById('adminPass').value;
 
   try {
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
+    // Firebase Auth email should match username (recommended).
+    // If you want phone-based admin auth, adjust accordingly.
+    const email = String(username || '').trim();
+    if(!email || !password) throw new Error('Missing credentials');
 
-    if (data.success) {
-      loginSection.classList.add('hidden');
-      uploadSection.classList.remove('hidden');
-      loadDocList();
-      loadPayments();
-    } else {
-      loginError.textContent = data.error || 'Invalid credentials';
-      loginError.classList.remove('hidden');
-    }
+    await auth.signInWithEmailAndPassword(email, password);
+    loginError.classList.add('hidden');
+
+    loginSection.classList.add('hidden');
+    uploadSection.classList.remove('hidden');
+    await loadDocList();
+    await loadPayments();
   } catch (err) {
     loginError.textContent = 'Login failed';
     loginError.classList.remove('hidden');
@@ -215,7 +287,7 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 logoutBtn.addEventListener('click', async () => {
-  await fetch('/api/admin/logout', { method: 'POST' });
+  try { await auth.signOut(); } catch {}
   window.location.reload();
 });
 
