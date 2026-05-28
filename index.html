@@ -316,9 +316,40 @@
         document.getElementById('loginModal').classList.remove('hidden');
       });
 
+      const loginForm = document.getElementById('loginForm');
+      const loginPhoneEl = document.getElementById('loginPhone');
+      const loginPasswordEl = document.getElementById('loginPassword');
+      const loginMessageEl = document.getElementById('loginMessage');
+
+      // Viewer login: only store phone locally if access is confirmed + not expired
+      loginForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const phone = loginPhoneEl?.value?.trim();
+        const password = loginPasswordEl?.value?.trim();
+
+        if (!phone || !password) {
+          if (loginMessageEl) loginMessageEl.textContent = 'Phone and password are required.';
+          return;
+        }
+
+        // password isn't currently used by backend; we keep it to match UI.
+        const normPhone = String(phone).replace(/\D/g, '');
+        const hasAccess = await checkUserAccess(normPhone);
+
+        if (hasAccess) {
+          localStorage.setItem('userPhone', normPhone);
+          if (loginMessageEl) loginMessageEl.textContent = 'Login successful. Access unlocked ✅';
+          document.getElementById('loginModal').classList.add('hidden');
+        } else {
+          if (loginMessageEl) loginMessageEl.textContent = 'Account not confirmed or expired. Please pay again.';
+          goToPricing();
+        }
+      });
+
       // If user stored phone locally after paying, refresh access-based gating
       // (library cards will still be rendered; click will be gated)
     }
+
 
 
     document.addEventListener('DOMContentLoaded', init);
