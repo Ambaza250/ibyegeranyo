@@ -61,6 +61,11 @@
   .doc-thumb::after{ content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.12)); }
   .doc-meta{ position:relative; z-index:2; }
 
+  /* Horizontal library cards (one row) */
+  #docGrid{ align-items:stretch; }
+  #docGrid > .doc-card{ width: 330px; flex: 0 0 auto; }
+
+
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
   </style>
 </head>
@@ -255,8 +260,20 @@
         <h2 class="text-2xl md:text-3xl font-semibold text-white">Documentaries Library</h2>
         <p class="text-sand/70">Tap a title to play.</p>
       </div>
-      <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="docGrid"></div>
-      <div id="libraryEmpty" class="hidden mt-8 glass-card p-6 text-sand/80">No documents available yet.</div>
+      <div class="mt-8" >
+        <div class="flex items-center justify-between gap-4 mb-4">
+          <div>
+            <p class="text-xs text-sand/70">Scroll to browse</p>
+          </div>
+          <div class="hidden md:block text-xs text-zinc-500">{Free / Subscribed} changes the watch button</div>
+        </div>
+        <div id="docRowScroller" class="relative">
+          <div class="flex gap-4 overflow-x-auto scroll-smooth pb-4" style="scrollbar-width: none; -ms-overflow-style: none;" >
+            <div id="docGrid" class="flex gap-4"></div>
+          </div>
+        </div>
+        <div id="libraryEmpty" class="hidden mt-8 glass-card p-6 text-sand/80">No documents available yet.</div>
+      </div>
     </section>
 
     <section id="pricing" class="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
@@ -462,6 +479,9 @@
 
 
   function renderDocumentaries(hasAccess){
+    const hasMobileScroll = document.getElementById('docRowScroller');
+    // no-op: container is already horizontal scroll; this keeps future hooks.
+
     const grid = document.getElementById('docGrid');
     const empty = document.getElementById('libraryEmpty');
     if(!grid) return;
