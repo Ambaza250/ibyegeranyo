@@ -247,13 +247,14 @@
     }
 
     // Render dynamic library
+    // fetch docs & always render them; gate playback on click by checking /api/me/access
     async function renderDocumentaries() {
       const grid = document.getElementById('docGrid');
       const empty = document.getElementById('libraryEmpty');
-      const phone = localStorage.getItem('viewer_phone') || '';
-      const hasAccess = await checkUserAccess(phone);
+      const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
 
       const docs = await fetchDocumentaries();
+
 
       if (docs.length === 0) {
         grid.innerHTML = '';
@@ -271,13 +272,12 @@
               <h3 class="text-white font-semibold text-base leading-snug">${doc.title}</h3>
               <p class="text-sm text-sand/80 mt-2 line-clamp-3">${doc.summary || ''}</p>
               <div class="mt-5">
-                ${hasAccess 
-                  ? `<div class="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black">
-                       <iframe src="${doc.cloudinaryUrl}" class="w-full h-full" allowfullscreen frameborder="0" allow="autoplay"></iframe>
-                     </div>`
-                  : `<button onclick="goToPricing()" class="btn btn-primary w-full justify-center text-sm">Subscribe to Watch</button>`
-                }
+                <button class="btn btn-ghost w-full justify-center text-sm"
+                        onclick="onDocumentaryClick('${doc.id}')">
+                  Watch now
+                </button>
               </div>
+
             </div>
           </article>`;
       }
@@ -288,8 +288,32 @@
       document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
     }
 
+    // Gate playback by backend access. If no active paid subscription => redirect to pricing.
+    async function onDocumentaryClick(docId) {
+      try {
+        const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
+        const hasAccess = await checkUserAccess(phone);
+        if (!hasAccess) {
+          goToPricing();
+          return;
+        }
+
+        const docs = await fetchDocumentaries();
+        const doc = docs.find(d => String(d.id) === String(docId));
+        if (!doc || !doc.cloudinaryUrl) {
+          alert('Video not available');
+          return;
+        }
+        window.open(doc.cloudinaryUrl, '_blank');
+      } catch (e) {
+        console.error(e);
+        alert('Unable to open documentary');
+      }
+    }
+
     // Initialize everything
     async function init() {
+
       document.getElementById('year').textContent = new Date().getFullYear();
       await renderDocumentaries();
 
@@ -298,8 +322,10 @@
         document.getElementById('loginModal').classList.remove('hidden');
       });
 
-      // Existing payment / login logic can stay or be added here
+      // If user stored phone locally after paying, refresh access-based gating
+      // (library cards will still be rendered; click will be gated)
     }
+
 
     document.addEventListener('DOMContentLoaded', init);
   </script>

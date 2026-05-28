@@ -161,13 +161,17 @@ app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, 
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
 
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // naming system: name + payment date
     const cleanName = String(fullName || payment.fullName || 'user')
       .trim()
       .replace(/[^a-zA-Z0-9]/g, '-')
       .toLowerCase();
 
-    const publicId = `${cleanName}-payment-${dateStr}-${Date.now()}`;
+    // include paymentId + timestamp to avoid collisions
+    const publicId = `${cleanName}-${dateStr}-${payment.id}-${Date.now()}`;
+
 
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream({
