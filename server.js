@@ -207,6 +207,7 @@ app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, 
     const publicId = `${cleanName}-${dateStr}-${payment.id}-${Date.now()}`;
 
 
+
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream({
         resource_type: 'image',
@@ -311,13 +312,17 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
     });
 
     const docData = {
+      // Required fields for library display
       title: title.trim(),
       summary: (summary || '').trim(),
       cloudinaryUrl: uploadResult.secure_url,
+
+      // Extra fields kept for UI/Admin convenience
       thumbnail: uploadResult.thumbnail_url || null,
       duration: 'HD',
       uploadedAt: new Date().toISOString()
     };
+
 
     const docRef = await db.collection('documentaries').add(docData);
 
