@@ -89,7 +89,8 @@
           </span>
 
           <button id="navRegisterBtn" class="btn btn-primary px-4 py-2 text-sm" type="button">Register</button>
-          <a id="navSubscribe" href="#pricing" class="btn btn-ghost px-4 py-2 text-sm">Subscribe / Pay</a>
+          <button id="navLoginBtn" class="btn btn-ghost px-4 py-2 text-sm" type="button">Login</button>
+
 
         </div>
       </div>
@@ -221,9 +222,9 @@
             <div>
               <label class="text-xs text-sand/70" for="regTier">Payment tier</label>
               <select id="regTier" class="input mt-2" required>
-                <option value="monthly">200 RWF / month (expires ~ 1 month)</option>
+                <option value="monthly">2000 RWF / month (expires ~ 1 month)</option>
                 <option value="weekly">700 RWF / week (expires 7 days)</option>
-                <option value="single">2000 RWF / 1 documentary (expires ~ 30 days)</option>
+                <option value="single">200 RWF / 1 documentary (expires ~ 30 days)</option>
                 <option value="yearly">22000 RWF / year (expires 365 days)</option>
               </select>
             </div>
@@ -373,11 +374,16 @@
 
       function phoneInputToAmount(tier){
         switch(String(tier)){
-          case 'monthly': return 200;
+          // Pricing rules:
+          // - monthly: 2000 RWF / month
+          // - weekly: 700 RWF / week
+          // - single: 200 RWF / 1 documentary
+          // - yearly: 22000 RWF / year
+          case 'monthly': return 2000;
           case 'weekly': return 700;
-          case 'single': return 2000;
+          case 'single': return 200;
           case 'yearly': return 22000;
-          default: return 200;
+          default: return 2000;
         }
       }
 

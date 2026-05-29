@@ -96,9 +96,14 @@ function computeExpiresAtFromPlan(planType) {
   const now = Date.now();
   const msDay = 24 * 60 * 60 * 1000;
 
+  // Pricing rules:
+  // - monthly: 200 RWF / month (expires ~ 30 days)
+  // - single: 2000 RWF / 1 documentary (expires ~ 30 days)
+  // - weekly/yearly tiers kept for backward compatibility
+  // - In case you still send other tier values, fall back to ~30 days.
   if (p === 'weekly') return new Date(now + 7 * msDay).toISOString();
   if (p === 'yearly') return new Date(now + 365 * msDay).toISOString();
-  return new Date(now + 30 * msDay).toISOString(); // monthly default
+  return new Date(now + 30 * msDay).toISOString(); // monthly/single default
 }
 
 function isPaymentActive(payment) {
@@ -261,7 +266,26 @@ app.post('/api/payments/upload-proof', upload.single('screenshot'), async (req, 
     });
 
     payment.screenshotUrl = result.secure_url;
+    payment.proofCloudinaryUrl = result.secure_url;
     payment.updatedAt = new Date().toISOString();
+
+    // Keep Firestore users/{phone} screenshot link in sync immediately after upload
+    // so admin can see the proof before/without requiring confirm.
+    const userSnap = await db.collection('users').where('payment.paymentId', '==', paymentId).limit(1).get();
+    if (!userSnap.empty) {
+      const docId = userSnap.docs[0].id;
+      await db.collection('users').doc(docId).set(
+        {
+          updatedAt: new Date().toISOString(),
+          payment: {
+            screenshotUrl: result.secure_url,
+            proofCloudinaryUrl: result.secure_url,
+            updatedAt: new Date().toISOString()
+          }
+        },
+        { merge: true }
+      );
+    }
 
     await savePayments(payments);
 
