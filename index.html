@@ -309,6 +309,7 @@
         const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
         const hasAccess = await checkUserAccess(phone);
         if(!hasAccess){
+          // Not logged in OR not active subscription => redirect to payment section
           goToPricing();
           return;
         }
