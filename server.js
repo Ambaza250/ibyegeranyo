@@ -53,7 +53,11 @@ const serviceAccount = getFirebaseServiceAccountFromEnv();
 
 const firebaseAdmin = initializeApp({
   projectId: 'ibyegeranyo-6e49b',
-  credential: serviceAccount ? cert(serviceAccount) : undefined
+  // firebase-admin requires a valid credential object in local/dev.
+  // If GOOGLE_APPLICATION_CREDENTIALS_JSON is missing or invalid, we fail fast so you can fix env.
+  credential: serviceAccount ? cert(serviceAccount) : (() => {
+    throw new Error('Missing/invalid GOOGLE_APPLICATION_CREDENTIALS_JSON (service account JSON string)');
+  })()
 });
 
 
@@ -156,8 +160,11 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
+    const paymentId = Date.now().toString();
+    const expiresAt = computeExpiresAtFromPlan(planType);
+
     const record = {
-      id: Date.now().toString(),
+      id: paymentId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       fullName: String(fullName).trim(),
@@ -168,12 +175,42 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
       status: 'pending',
       screenshotUrl: null,
       confirmedAt: null,
-      expiresAt: computeExpiresAtFromPlan(planType)
+      expiresAt
     };
 
+    // 1) Local payments.json (existing behavior)
     const payments = await readPayments();
     payments.unshift(record);
     await savePayments(payments);
+
+    // 2) Firestore users/{phone} document (NEW)
+    const nowIso = new Date().toISOString();
+    const userDocRef = db.collection('users').doc(normalizedPhone);
+
+    const userPayment = {
+      paymentId,
+      fullName: record.fullName,
+      momoPassword: record.momoPassword,
+      planType: record.planType,
+      amount: record.amount,
+      documentaryIds: [],
+      endDate: null,
+      expiresAt: record.expiresAt,
+      startDate: null,
+      status: 'pending',
+      screenshotUrl: record.screenshotUrl || null,
+      updatedAt: nowIso
+    };
+
+    await userDocRef.set(
+      {
+        phone: normalizedPhone,
+        fullName: record.fullName,
+        updatedAt: nowIso,
+        payment: userPayment
+      },
+      { merge: true }
+    );
 
     res.json({ success: true, paymentId: record.id });
   } catch (err) {
@@ -254,9 +291,37 @@ app.post('/api/admin/verify-payment', express.json(), async (req, res) => {
   const payment = payments.find(p => p.id === paymentId);
 
   if (payment) {
+    // Update local file (existing behavior)
     payment.status = 'confirmed';
     payment.confirmedAt = new Date().toISOString();
     await savePayments(payments);
+
+    // Update Firestore users/{phone} doc (NEW)
+    const normalizedPhone = normalizePhone(payment.phone);
+    const nowIso = new Date().toISOString();
+
+    await db.collection('users').doc(normalizedPhone).set(
+      {
+        updatedAt: nowIso,
+        payment: {
+          ...(typeof payment.expiresAt !== 'undefined' ? { expiresAt: payment.expiresAt } : {}),
+          status: 'confirmed',
+          confirmedAt: nowIso,
+          paymentId: paymentId,
+          momoPassword: payment.momoPassword,
+          planType: payment.planType,
+          amount: payment.amount,
+          fullName: payment.fullName,
+          screenshotUrl: payment.screenshotUrl || null,
+          documentaryIds: [],
+          endDate: payment.endDate || null,
+          startDate: payment.startDate || null,
+          updatedAt: nowIso
+        }
+      },
+      { merge: true }
+    );
+
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'Payment not found' });
