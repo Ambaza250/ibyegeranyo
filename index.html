@@ -404,12 +404,14 @@
         regUssdCode.value = computeUSSD(phoneVal, amt);
       }
 
+      // Native <select> styling: ensure white text is always visible.
       regTier.addEventListener('change', updateTierUI);
       regPhone.addEventListener('input', updateTierUI);
       updateTierUI();
 
-      // Keep select text visible on dark background
       regTier.style.color = 'white';
+      regTier.style.backgroundColor = 'rgba(0,0,0,0.35)';
+
 
 
       navRegisterBtn?.addEventListener('click', () => {
@@ -464,8 +466,12 @@
 
           if(res?.success){
             regPaymentId.value = res.paymentId;
-            showRegStatus('Payment created. Now click “Dial now” then upload your screenshot ✅');
+
+            // Ensure tel dial happens only after user clicks the dial button.
+            // Never auto-dial from registration.
+            showRegStatus('Payment created ✅ Now click “Dial now” then upload your screenshot');
           }else{
+
             throw new Error(res?.error || 'Create payment failed');
           }
         }catch(err){
