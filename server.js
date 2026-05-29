@@ -198,7 +198,10 @@ app.post('/api/payments/create', express.json(), async (req, res) => {
       expiresAt: record.expiresAt,
       startDate: null,
       status: 'pending',
+      // Cloudinary proof link (screenshots)
       screenshotUrl: record.screenshotUrl || null,
+      // Also duplicate at top-level for easier admin rendering (if needed)
+      proofCloudinaryUrl: record.screenshotUrl || null,
       updatedAt: nowIso
     };
 
@@ -303,6 +306,7 @@ app.post('/api/admin/verify-payment', express.json(), async (req, res) => {
     await db.collection('users').doc(normalizedPhone).set(
       {
         updatedAt: nowIso,
+        // Keep a top-level duplicate as well (helps admin UIs)
         payment: {
           ...(typeof payment.expiresAt !== 'undefined' ? { expiresAt: payment.expiresAt } : {}),
           status: 'confirmed',
@@ -312,7 +316,9 @@ app.post('/api/admin/verify-payment', express.json(), async (req, res) => {
           planType: payment.planType,
           amount: payment.amount,
           fullName: payment.fullName,
+          // Cloudinary proof link (screenshots)
           screenshotUrl: payment.screenshotUrl || null,
+          proofCloudinaryUrl: payment.screenshotUrl || null,
           documentaryIds: [],
           endDate: payment.endDate || null,
           startDate: payment.startDate || null,
