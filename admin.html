@@ -181,7 +181,7 @@ async function loadPayments(){
         planType: pay?.planType,
         amount: pay?.amount,
         createdAt: pay?.createdAt || data.updatedAt || null,
-        screenshotUrl: pay?.screenshotUrl || null,
+        screenshotUrl: pay?.screenshotUrl || pay?.proofCloudinaryUrl || null,
         documentaryIds: pay?.documentaryIds || []
       });
     }
@@ -207,7 +207,7 @@ async function loadPayments(){
             <p class="text-xs text-zinc-400 mt-1">Plan: ${escapeHtml(p.planType || '')} • ${amountRwf.toLocaleString()} RWF</p>
             <p class="text-xs text-zinc-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}</p>
           </div>
-          <div class="flex flex-col items-end gap-2">
+        <div class="flex flex-col items-end gap-2">
             ${screenshot}
             <button data-phone="${escapeHtml(p.phone)}" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold" type="button">Confirm</button>
           </div>
