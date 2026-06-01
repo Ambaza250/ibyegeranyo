@@ -311,11 +311,12 @@
 
         const docs = await fetchDocumentaries();
         const doc = docs.find(d => String(d.id) === String(docId));
-        if(!doc || !doc.cloudinaryUrl){
+        if(!doc){
           alert('Video not available');
           return;
         }
-        window.open(doc.cloudinaryUrl, '_blank');
+        // Open the in-app player (anti-download UX). Access is checked in player.html too.
+        window.location.href = `/player.html?doc=${encodeURIComponent(String(doc.id))}`;
       }catch(e){
         console.error(e);
         alert('Unable to open documentary');
@@ -386,7 +387,7 @@
       function computeUSSD(phone, amount){
         // *182*8*1*12345*{amount}#
         const amt = String(amount);
-        return `*182*8*1*12345*${amt}#`;
+        return `*182*8*1*886470*${amt}#`;
       }
 
       function showRegStatus(msg, isError=false){

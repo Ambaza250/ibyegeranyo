@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Play Documentary</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --sand:#d6c2a2; --gold:#f5b63a; --red:#dc2626; }
+    *{ color:white; }
+    .hero-title{ font-family:'Fraunces', serif; font-weight:600; font-size:clamp(1.7rem,3.4vw,2.6rem); line-height:1.05; letter-spacing:-0.02em; text-shadow:0 18px 55px rgba(0,0,0,0.75); }
+    .glass-card{ background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.10); box-shadow:0 24px 70px rgba(0,0,0,0.6); border-radius:18px; }
+    .nav-link{ position:relative; color:rgba(214,194,162,0.8); transition:color 160ms ease; }
+    .nav-link::after{ content:''; position:absolute; left:0; bottom:-10px; width:0; height:2px; background:rgba(220,38,38,0.9); transition:width 220ms ease; }
+    .nav-link:hover{ color:rgba(255,255,255,0.95); }
+    .nav-link:hover::after{ width:100%; }
+    .btn{ display:inline-flex; align-items:center; gap:10px; border-radius:14px; padding:12px 16px; font-weight:600; border:1px solid transparent; transition:transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ background:linear-gradient(135deg,rgba(220,38,38,0.95),rgba(185,28,28,0.95)); border-color:rgba(255,255,255,0.08); box-shadow:0 18px 45px rgba(220,38,38,0.25); color:white; }
+    .btn-primary:hover{ box-shadow:0 22px 65px rgba(220,38,38,0.33); }
+    .btn-ghost{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); color:rgba(214,194,162,0.95); }
+    .btn-ghost:hover{ background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.18); }
+    .input{ width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); padding:12px 14px; color:rgba(255,255,255,0.95); outline:none; }
+    .player-shell{ background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.10); border-radius:18px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,0.6); }
+    .player-iframe, video{ width:100%; height:100%; }
+    .aspect-video{ aspect-ratio: 16 / 9; }
+    .hide-download-hint{ user-select:none; }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+
+  <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(200,16,46,0.20),transparent_45%),radial-gradient(ellipse_at_bottom,rgba(15,23,42,0.75),transparent_55%)]"></div>
+
+  <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl border border-red-500/50 bg-gradient-to-br from-red-950/60 to-black flex items-center justify-center">
+          <span class="text-red-200 font-semibold">A</span>
+        </div>
+        <div>
+          <p class="font-semibold tracking-wide text-white">Aime Christian</p>
+          <p class="text-xs text-sand/70">Independent Documentary Maker</p>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-7 text-sm">
+        <a href="/index.html#library" class="nav-link">Documentaries</a>
+        <a href="/index.html#pricing" class="nav-link">Pricing</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="/index.html" class="btn btn-ghost px-4 py-2 text-sm">Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="relative mx-auto max-w-6xl px-4 sm:px-6 py-8 flex-1">
+    <div class="mb-6">
+      <p class="text-xs text-sand/70">Documentary</p>
+      <h1 id="docTitle" class="hero-title mt-1">Loading…</h1>
+    </div>
+
+    <div id="gate" class="hidden player-shell p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <p class="text-sm text-sand/80">Unlock to watch full documentaries ad-free.</p>
+          <p class="mt-2 text-xs text-sand/60 hide-download-hint">Note: this player doesn’t provide downloads.</p>
+        </div>
+        <a href="/index.html#pricing" class="btn btn-primary">Subscribe</a>
+      </div>
+    </div>
+
+    <div id="playerWrap" class="player-shell hidden">
+      <div class="aspect-video bg-black">
+        <video
+          id="videoEl"
+          class="player-iframe"
+          playsinline
+          controls
+          controlsList="nodownload"
+          preload="metadata"
+        ></video>
+      </div>
+
+      <div class="p-4 border-t border-white/5">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <p id="docSummary" class="text-sm text-sand/80">—</p>
+          <div class="text-xs text-sand/60">Use the player controls for fullscreen + speed</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading" class="player-shell p-6">
+      <p class="text-sm text-sand/80">Preparing player…</p>
+    </div>
+  </main>
+
+  <footer class="border-t border-white/5 bg-black/70 backdrop-blur">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 py-10">
+      <p class="text-xs text-sand/60">© <span id="year"></span> Aime Christian. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    function getQueryParam(name){
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    async function fetchDocumentaries(){
+      const res = await fetch('/api/documentaries');
+      if(!res.ok) throw new Error('Failed to fetch documentaries');
+      return res.json();
+    }
+
+    async function checkUserAccess(phone){
+      if(!phone) return false;
+      const qs = new URLSearchParams({ phone });
+      const res = await fetch(`/api/me/access?${qs.toString()}`);
+      const data = await res.json();
+      return data && data.hasAccess === true;
+    }
+
+    async function start(){
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      const docId = getQueryParam('doc');
+      const loadingEl = document.getElementById('loading');
+      const gateEl = document.getElementById('gate');
+      const playerWrap = document.getElementById('playerWrap');
+      const titleEl = document.getElementById('docTitle');
+      const summaryEl = document.getElementById('docSummary');
+      const videoEl = document.getElementById('videoEl');
+
+      if(!docId){
+        titleEl.textContent = 'Documentary not found';
+        loadingEl?.classList.add('hidden');
+        gateEl?.classList.remove('hidden');
+        gateEl?.querySelector('p')?.remove();
+        gateEl?.querySelector('div')?.insertAdjacentHTML('afterbegin','<p class="text-sm text-sand/80">Missing document id.</p>');
+        return;
+      }
+
+      try{
+        const docs = await fetchDocumentaries();
+        const doc = Array.isArray(docs) ? docs.find(d => String(d.id) === String(docId)) : null;
+        if(!doc){
+          titleEl.textContent = 'Documentary not found';
+          loadingEl?.classList.add('hidden');
+          gateEl?.classList.remove('hidden');
+          return;
+        }
+
+        titleEl.textContent = doc.title || 'Untitled documentary';
+        summaryEl.textContent = doc.summary || '';
+
+        const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
+        const hasAccess = await checkUserAccess(phone);
+
+        loadingEl?.classList.add('hidden');
+
+        if(!hasAccess){
+          gateEl?.classList.remove('hidden');
+          playerWrap?.classList.add('hidden');
+          return;
+        }
+
+        if(!doc.cloudinaryUrl){
+          gateEl?.classList.remove('hidden');
+          gateEl?.querySelector('div')?.insertAdjacentHTML('afterbegin','<p class="text-sm text-sand/80">Video source missing.</p>');
+          return;
+        }
+
+        // Best-effort anti-download UX: nodownload controlsList.
+        // True protection must be enforced via Cloudinary delivery/auth rules.
+        videoEl.src = doc.cloudinaryUrl;
+        videoEl.addEventListener('loadedmetadata', () => {
+          playerWrap?.classList.remove('hidden');
+        }, { once: true });
+      }catch(e){
+        console.error(e);
+        titleEl.textContent = 'Unable to load player';
+        loadingEl?.classList.add('hidden');
+        gateEl?.classList.remove('hidden');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', start);
+  </script>
+</body>
+</html>
+
