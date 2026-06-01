@@ -123,6 +123,8 @@ function doesPasswordMatch(payment, password) {
 // ====================== ROUTES ======================
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.resolve(process.cwd(), 'admin.html')));
+app.get('/player.html', (req, res) => res.sendFile(path.resolve(process.cwd(), 'player.html')));
+
 
 // Admin Auth
 app.post('/api/admin/login', express.json(), (req, res) => {
