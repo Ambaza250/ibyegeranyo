@@ -301,27 +301,21 @@
 
     async function onDocumentaryClick(docId){
       try{
-        const phone = localStorage.getItem('userPhone') || localStorage.getItem('viewer_phone') || '';
-        const hasAccess = await checkUserAccess(phone);
-        if(!hasAccess){
-          // Not logged in OR not active subscription => redirect to payment section
-          goToPricing();
-          return;
-        }
-
+        // Always open player. Player decides whether to show full video or trailer.
+        // This fixes the bug where non-logged-in users were redirected directly to pricing.
         const docs = await fetchDocumentaries();
         const doc = docs.find(d => String(d.id) === String(docId));
         if(!doc){
           alert('Video not available');
           return;
         }
-        // Open the in-app player (anti-download UX). Access is checked in player.html too.
         window.location.href = `/player.html?doc=${encodeURIComponent(String(doc.id))}`;
       }catch(e){
         console.error(e);
         alert('Unable to open documentary');
       }
     }
+
 
     async function renderDocumentaries(){
       const grid = document.getElementById('docGrid');
