@@ -420,7 +420,6 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
       uploadedAt: new Date().toISOString()
     };
 
-
     const docRef = await db.collection('documentaries').add(docData);
 
     res.json({
@@ -434,11 +433,76 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
   }
 });
 
+// Upload Trailer for an existing documentary → Cloudinary + update Firestore
+app.post('/api/documentaries/:id/trailer', upload.single('trailer'), async (req, res) => {
+  try {
+    if (req.cookies.admin !== 'true') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const documentaryId = req.params.id;
+    const file = req.file;
+
+    if (!documentaryId) {
+      return res.status(400).json({ error: 'Documentary id is required' });
+    }
+    if (!file) {
+      return res.status(400).json({ error: 'Trailer video file is required' });
+    }
+
+    // Get documentary title (for nicer Cloudinary naming)
+    let docTitle = 'documentary';
+    try {
+      const snap = await db.collection('documentaries').doc(documentaryId).get();
+      if (snap.exists) {
+        const d = snap.data() || {};
+        if (d.title) docTitle = String(d.title);
+      }
+    } catch {
+      // best-effort only
+    }
+
+    const sanitizedTitle = docTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const publicId = `documentaries-trailers/${sanitizedTitle}-${documentaryId}-${Date.now()}`;
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream({
+        resource_type: 'video',
+        public_id: publicId,
+        folder: 'aime-christian-documentaries-trailers',
+        chunk_size: 6000000
+      }, (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }).end(file.buffer);
+    });
+
+    const trailerUrl = uploadResult.secure_url;
+
+    await db.collection('documentaries').doc(documentaryId).set(
+      {
+        trailerUrl,
+        trailerThumbnail: uploadResult.thumbnail_url || null,
+        trailerUploadedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      { merge: true }
+    );
+
+    res.json({ success: true, trailerUrl });
+  } catch (error) {
+    console.error('Upload trailer error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // Check user access (login gate)
 // IMPORTANT: login verification reads from Firestore `users/{phone}.payment`.
 // Admin flows/upload-proof still use local payments.json as usual.
 app.get('/api/me/access', async (req, res) => {
   try {
+
     const { phone, password } = req.query;
     if (!phone) return res.json({ hasAccess: false });
 

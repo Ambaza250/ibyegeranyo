@@ -60,6 +60,28 @@
             <input type="text" id="title" placeholder="Enter documentary title" class="w-full p-4 bg-zinc-900 rounded-xl" required />
           </div>
 
+          <!-- Add Trailer -->
+          <div class="mt-10 mb-6 pt-6 border-t border-white/10">
+            <h3 class="text-xl font-semibold mb-4">Add Trailer</h3>
+            <div class="mb-4">
+              <label class="block text-sm mb-2">Documentary</label>
+              <select id="trailerDocId" class="w-full p-4 bg-zinc-900 rounded-xl" required>
+                <option value="" selected disabled>Choose a documentary…</option>
+              </select>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm mb-2">Trailer Video File</label>
+              <input type="file" id="trailerFile" accept="video/*" class="w-full p-4 bg-zinc-900 rounded-xl" required />
+            </div>
+
+            <button type="button" id="uploadTrailerBtn" class="w-full bg-zinc-800 hover:bg-zinc-700 py-4 rounded-xl font-semibold text-lg">
+              Upload Trailer
+            </button>
+            <p id="trailerStatus" class="text-sm text-zinc-400 mt-3 hidden"></p>
+          </div>
+
+
           <div class="mb-6">
             <label class="block text-sm mb-2">Summary</label>
             <textarea id="summary" rows="4" placeholder="Write a short summary..." class="w-full p-4 bg-zinc-900 rounded-xl resize-y"></textarea>
@@ -156,6 +178,20 @@ const docList = document.getElementById('docList');
 
 const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
 const paymentList = document.getElementById('paymentList');
+
+// Trailer upload UI
+const trailerDocId = document.getElementById('trailerDocId');
+const trailerFileInput = document.getElementById('trailerFile');
+const uploadTrailerBtn = document.getElementById('uploadTrailerBtn');
+const trailerStatusEl = document.getElementById('trailerStatus');
+
+function showTrailerStatus(msg, isError=false){
+  if(!trailerStatusEl) return;
+  trailerStatusEl.classList.remove('hidden');
+  trailerStatusEl.textContent = msg;
+  trailerStatusEl.style.color = isError ? 'rgba(220,38,38,0.95)' : 'rgba(134,239,172,0.95)';
+}
+
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, (c)=>({
@@ -380,7 +416,65 @@ async function loadDocList() {
 }
 
 refreshListBtn.addEventListener('click', loadDocList);
+
+// Load documentaries into trailer dropdown
+async function loadTrailerDocOptions(){
+  try{
+    if(!trailerDocId) return;
+    const res = await fetch('/api/documentaries');
+    const docs = await res.json();
+
+    const current = trailerDocId.value;
+    trailerDocId.innerHTML = '<option value="" selected disabled>Choose a documentary…</option>' +
+      (Array.isArray(docs) ? docs.map(d => `<option value="${d.id}">${d.title}</option>`).join('') : '');
+
+    if(current){
+      const stillExists = Array.isArray(docs) && docs.some(d => String(d.id) === String(current));
+      if(stillExists) trailerDocId.value = current;
+    }
+  }catch(e){
+    console.error(e);
+  }
+}
+
+uploadTrailerBtn?.addEventListener('click', async ()=>{
+  try{
+    if(!trailerDocId?.value) return showTrailerStatus('Choose a documentary first.', true);
+    const file = trailerFileInput?.files?.[0];
+    if(!file) return showTrailerStatus('Select a trailer video file.', true);
+
+    showTrailerStatus('Uploading trailer…');
+    uploadTrailerBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('trailer', file);
+
+    const docId = trailerDocId.value;
+    const res = await fetch(`/api/documentaries/${encodeURIComponent(docId)}/trailer`, {
+      method: 'POST',
+      body: formData
+    });
+
+
+    const data = await res.json().catch(()=> ({}));
+    if(!res.ok || !data.success) throw new Error(data.error || 'Trailer upload failed');
+
+    showTrailerStatus('✅ Trailer uploaded');
+    trailerFileInput.value = '';
+  }catch(e){
+    showTrailerStatus(e.message || 'Trailer upload failed', true);
+  }finally{
+    if(uploadTrailerBtn) uploadTrailerBtn.disabled = false;
+  }
+});
+
+// On load (admin already checked)
+(async ()=>{
+  if(trailerDocId) await loadTrailerDocOptions();
+})();
+
 checkAuth();
+
   </script>
 </body>
 </html>
