@@ -60,19 +60,19 @@
             <input type="text" id="title" placeholder="Enter documentary title" class="w-full p-4 bg-zinc-900 rounded-xl" required />
           </div>
 
-          <!-- Add Trailer -->
+          <!-- Add Trailer (optional, separate from documentary upload) -->
           <div class="mt-10 mb-6 pt-6 border-t border-white/10">
-            <h3 class="text-xl font-semibold mb-4">Add Trailer</h3>
+            <h3 class="text-xl font-semibold mb-4">Add Trailer (optional)</h3>
             <div class="mb-4">
               <label class="block text-sm mb-2">Documentary</label>
-              <select id="trailerDocId" class="w-full p-4 bg-zinc-900 rounded-xl" required>
+              <select id="trailerDocId" class="w-full p-4 bg-zinc-900 rounded-xl">
                 <option value="" selected disabled>Choose a documentary…</option>
               </select>
             </div>
 
             <div class="mb-4">
               <label class="block text-sm mb-2">Trailer Video File</label>
-              <input type="file" id="trailerFile" accept="video/*" class="w-full p-4 bg-zinc-900 rounded-xl" required />
+              <input type="file" id="trailerFile" accept="video/*" class="w-full p-4 bg-zinc-900 rounded-xl" />
             </div>
 
             <button type="button" id="uploadTrailerBtn" class="w-full bg-zinc-800 hover:bg-zinc-700 py-4 rounded-xl font-semibold text-lg">
