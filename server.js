@@ -17,9 +17,22 @@ const app = express();
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd())));
 
+// Use disk storage so large videos don't need to fit into RAM.
+// This prevents crashes/timeouts on big uploads.
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, path.join(process.cwd(), 'tmp-uploads')),
+    filename: (req, file, cb) => {
+      const safeName = String(file.originalname || 'upload')
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .slice(0, 180);
+      cb(null, `${Date.now()}-${safeName}`);
+    }
+  }),
+  limits: {
+    // Keep upload size high; Cloudinary handles large video streaming.
+    fileSize: 1024 * 1024 * 1024 // 1GB
+  }
 });
 
 // ====================== CLOUDINARY ======================
