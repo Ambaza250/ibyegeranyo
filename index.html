@@ -356,12 +356,18 @@
     };
 
     // Firebase init kept to avoid breaking existing config; library is backend-gated via /api.
-    firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 
     async function fetchDocumentaries(){
       const res = await fetch('/api/documentaries');
       if(!res.ok) throw new Error('Failed to fetch documentaries');
-      return res.json();
+      const data = await res.json();
+      // Defensive normalization: ensure title/summary are safe strings
+      return Array.isArray(data) ? data.map(d => ({
+        ...d,
+        title: d.title || '',
+        summary: d.summary || ''
+      })) : [];
     }
 
     async function checkUserAccess(phone, password){

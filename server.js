@@ -62,15 +62,28 @@ function getFirebaseServiceAccountFromEnv() {
 
 import { cert } from 'firebase-admin/app';
 
-const serviceAccount = getFirebaseServiceAccountFromEnv();
+// Prefer Vercel/prod env var if present, but always fall back to local serviceAccountKey.json
+// so /api/documentaries works in local/dev.
+const envServiceAccount = getFirebaseServiceAccountFromEnv();
+
+function loadLocalServiceAccountFileSync() {
+  try {
+    const fs = require('fs');
+    const localPath = path.join(process.cwd(), 'serviceAccountKey.json');
+    if (!fs.existsSync(localPath)) return null;
+    const raw = fs.readFileSync(localPath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+const localServiceAccount = loadLocalServiceAccountFileSync();
+const cred = envServiceAccount || localServiceAccount;
 
 const firebaseAdmin = initializeApp({
   projectId: 'ibyegeranyo-6e49b',
-  // firebase-admin requires a valid credential object in local/dev.
-  // If GOOGLE_APPLICATION_CREDENTIALS_JSON is missing or invalid, we fail fast so you can fix env.
-  credential: serviceAccount ? cert(serviceAccount) : (() => {
-    throw new Error('Missing/invalid GOOGLE_APPLICATION_CREDENTIALS_JSON (service account JSON string)');
-  })()
+  ...(cred ? { credential: cert(cred) } : {})
 });
 
 
@@ -375,6 +388,11 @@ app.post('/api/admin/verify-payment', express.json(), async (req, res) => {
 
 // ====================== DOCUMENTARIES (Firestore) ======================
 app.get('/api/documentaries', async (req, res) => {
+  // IMPORTANT: This route must always return documentaries for the main page.
+  // If Firestore is not available (e.g., local credentials issues), we fall back
+  // to the local database file: documentaries/data.json.
+
+  // 1) Try Firestore (best-effort)
   try {
     const snapshot = await db.collection('documentaries')
       .orderBy('uploadedAt', 'desc')
@@ -386,9 +404,27 @@ app.get('/api/documentaries', async (req, res) => {
     }));
 
     res.json(docs);
+    return;
   } catch (error) {
-    console.error('Error fetching documentaries:', error);
-    res.status(500).json([]);
+    // Fall through to local file
+    console.error('Error fetching documentaries from Firestore:', error);
+  }
+
+  // 2) Fallback to local file (source of truth for the library rendering)
+  try {
+    const localPath = path.join(process.cwd(), 'documentaries', 'data.json');
+    const raw = await fsp.readFile(localPath, 'utf8');
+    const parsed = JSON.parse(raw);
+
+    // Support both shapes: [] OR { documentaries: [] }
+    const docs = Array.isArray(parsed)
+      ? parsed
+      : (parsed?.documentaries || []);
+
+    res.json(Array.isArray(docs) ? docs : []);
+  } catch (e) {
+    console.error('Error fetching documentaries from local file:', e);
+    res.status(200).json([]);
   }
 });
 
