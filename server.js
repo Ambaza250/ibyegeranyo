@@ -1,5 +1,6 @@
 // server.js - FULL UPDATED VERSION (May 2026)
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import fsp from 'fs/promises';
 import cookieParser from 'cookie-parser';
@@ -68,7 +69,6 @@ const envServiceAccount = getFirebaseServiceAccountFromEnv();
 
 function loadLocalServiceAccountFileSync() {
   try {
-    const fs = require('fs');
     const localPath = path.join(process.cwd(), 'serviceAccountKey.json');
     if (!fs.existsSync(localPath)) return null;
     const raw = fs.readFileSync(localPath, 'utf8');
@@ -85,6 +85,16 @@ const firebaseAdmin = initializeApp({
   projectId: 'ibyegeranyo-6e49b',
   ...(cred ? { credential: cert(cred) } : {})
 });
+
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
 
 
 
@@ -394,14 +404,20 @@ app.get('/api/documentaries', async (req, res) => {
 
   // 1) Try Firestore (best-effort)
   try {
-    const snapshot = await db.collection('documentaries')
-      .orderBy('uploadedAt', 'desc')
-      .get();
+    const snapshot = await withTimeout(
+      db.collection('documentaries').get(),
+      5000,
+      'Firestore documentaries query timed out'
+    );
 
     const docs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }));
+    })).sort((a, b) => {
+      const aTime = Date.parse(a.uploadedAt || a.createdAt || 0);
+      const bTime = Date.parse(b.uploadedAt || b.createdAt || 0);
+      return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
+    });
 
     res.json(docs);
     return;
