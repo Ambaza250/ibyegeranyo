@@ -357,27 +357,55 @@ uploadForm.addEventListener('submit', async (e) => {
   progressBar.style.width = '0%';
   progressText.textContent = '0%';
 
-  const formData = new FormData();
-  formData.append('title', title);
-  formData.append('summary', summary);
-  formData.append('video', file);
-
   try {
-    const res = await fetch('/api/upload-documentary', {
-      method: 'POST',
-      body: formData
+    // Option A: Upload to Vercel Blob directly from the browser,
+    // then call backend to stream it into Cloudinary.
+    // This avoids sending large multipart video payloads to Express.
+
+    // Client-side upload to Vercel Blob using your write token.
+    // IMPORTANT: This is only safe if you understand the security tradeoff.
+    // You MUST NOT expose a write token publicly for production.
+    // For local/admin-only usage, you can proceed.
+
+    const BLOB_WRITE_TOKEN = import.meta?.env?.BLOB_WRITE_TOKEN || window.VERCEL_BLOB_WRITE_TOKEN || '';
+    if (!BLOB_WRITE_TOKEN) {
+      throw new Error('Missing VERCEL_BLOB_WRITE_TOKEN in browser. Set it on window before upload.');
+    }
+
+    // Dynamically import the browser bundle.
+    const mod = await import('https://cdn.jsdelivr.net/npm/@vercel/blob@0/dist/index.js');
+    const { put } = mod;
+    if (!put) {
+      throw new Error('@vercel/blob put() not available in browser bundle.');
+    }
+
+    // Upload file to Blob.
+    const blobRes = await put(file, {
+      access: 'public',
+      token: BLOB_WRITE_TOKEN,
+      pathname: `documentaries/${Date.now()}-${file.name}`
     });
+
+    const blobUrl = typeof blobRes?.url === 'string' ? blobRes.url : '';
+    if (!blobUrl) {
+      throw new Error('Blob upload succeeded but no blobUrl returned.');
+    }
+
+    const res = await fetch('/api/documentaries/upload-from-blob', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, summary, blobUrl })
+    });
+
+
 
     let data;
     const text = await res.text();
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("Server returned:", text);
-      throw new Error("Server error - please check server logs");
+    try { data = text ? JSON.parse(text) : {}; } catch {
+      throw new Error('Server returned invalid JSON');
     }
 
-    if (data.success) {
+    if (res.ok && data.success) {
       alert('✅ Documentary uploaded successfully!');
       uploadForm.reset();
       progressContainer.classList.add('hidden');
@@ -392,6 +420,7 @@ uploadForm.addEventListener('submit', async (e) => {
     uploadBtn.disabled = false;
   }
 });
+
 
 async function loadDocList() {
   try {
