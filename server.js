@@ -261,6 +261,12 @@ app.get('/api/admin/check', (req, res) => {
   res.json({ isLoggedIn: req.cookies.admin === 'true' });
 });
 
+// Compatibility endpoint for admin.html
+app.get('/api/admin/me', (req, res) => {
+  res.json({ loggedIn: req.cookies.admin === 'true' });
+});
+
+
 // ====================== PAYMENTS ======================
 app.post('/api/payments/create', express.json(), async (req, res) => {
   try {
