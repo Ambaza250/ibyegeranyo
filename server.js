@@ -241,19 +241,43 @@ app.get('/admin', (req, res) => res.sendFile(path.resolve(process.cwd(), 'admin.
 app.get('/player.html', (req, res) => res.sendFile(path.resolve(process.cwd(), 'player.html')));
 
 
-// Admin Auth
+// ====================== ADMIN AUTH ======================
+// Simple server-side check against stored credentials.
+// (Fix: normalize input + always return explicit success/401 so frontend doesn't silently stay on login.)
 app.post('/api/admin/login', express.json(), (req, res) => {
-  const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
-    res.cookie('admin', 'true', { httpOnly: true, maxAge: 3600000 });
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ error: 'Invalid credentials' });
+  const { username, password } = req.body || {};
+
+  const u = String(username ?? '').trim();
+  const p = String(password ?? '');
+
+  // Optional: allow local debug header to diagnose issues without exposing more info.
+  // If you don't use it, it won't affect behavior.
+  const debug = req.headers['x-admin-debug'] === '1';
+
+  const isValid = u === ADMIN_USER && p === ADMIN_PASS;
+
+  if (!isValid) {
+    if (debug) {
+      console.warn('[admin/login] invalid attempt', {
+        username: u,
+        hasPassword: p.length > 0
+      });
+    }
+    return res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
+
+  // Ensure cookie is available for subsequent requests.
+  res.cookie('admin', 'true', {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 3600000
+  });
+
+  res.json({ success: true });
 });
 
 app.post('/api/admin/logout', (req, res) => {
-  res.clearCookie('admin');
+  res.clearCookie('admin', { httpOnly: true, sameSite: 'lax' });
   res.json({ success: true });
 });
 
@@ -265,6 +289,7 @@ app.get('/api/admin/check', (req, res) => {
 app.get('/api/admin/me', (req, res) => {
   res.json({ loggedIn: req.cookies.admin === 'true' });
 });
+
 
 
 // ====================== PAYMENTS ======================

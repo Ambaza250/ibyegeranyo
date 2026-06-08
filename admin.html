@@ -139,7 +139,10 @@ const firebaseConfig = {
   measurementId: "G-GF146S03X0"
 };
 
-firebase.initializeApp(firebaseConfig);
+// Prevent “app/duplicate-app” errors when admin.html is reloaded / embedded.
+if (!firebase.apps || firebase.apps.length === 0) {
+  firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -320,11 +323,23 @@ loginForm.addEventListener('submit', async (e) => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) throw new Error(data.error || 'Login failed');
 
+    // Double-check cookie is present (helps diagnose cases where browser refuses cookies)
+    try {
+      const me = await fetch('/api/admin/me');
+      const meData = await me.json().catch(() => ({}));
+      if (!meData || meData.loggedIn !== true) {
+        throw new Error('Login cookie was not set (blocked by browser / third-party cookie policy).');
+      }
+    } catch (e) {
+      throw e;
+    }
+
     loginError.classList.add('hidden');
     loginSection.classList.add('hidden');
     uploadSection.classList.remove('hidden');
     await loadDocList();
     await loadPayments();
+
   } catch (err) {
     loginError.textContent = 'Login failed';
     loginError.classList.remove('hidden');
@@ -367,7 +382,7 @@ uploadForm.addEventListener('submit', async (e) => {
     // You MUST NOT expose a write token publicly for production.
     // For local/admin-only usage, you can proceed.
 
-    const BLOB_WRITE_TOKEN = import.meta?.env?.BLOB_WRITE_TOKEN || window.VERCEL_BLOB_WRITE_TOKEN || '';
+    const BLOB_WRITE_TOKEN = (typeof window !== 'undefined' && window.VERCEL_BLOB_WRITE_TOKEN) ? window.VERCEL_BLOB_WRITE_TOKEN : '';
     if (!BLOB_WRITE_TOKEN) {
       throw new Error('Missing VERCEL_BLOB_WRITE_TOKEN in browser. Set it on window before upload.');
     }
