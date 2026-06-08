@@ -122,16 +122,54 @@
     </div>
   </footer>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1ZLAb5aS3NEPOhKwr2D8-mer6GgKtnY0",
+      authDomain: "ibyegeranyo-6e49b.firebaseapp.com",
+      projectId: "ibyegeranyo-6e49b",
+      storageBucket: "ibyegeranyo-6e49b.firebasestorage.app",
+      messagingSenderId: "629430042353",
+      appId: "1:629430042353:web:7bbd7e6549f4b224913350"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
     function getQueryParam(name){
       const url = new URL(window.location.href);
       return url.searchParams.get(name);
     }
 
+    function normalizeDocumentaries(data){
+      return Array.isArray(data) ? data.map(d => ({
+        ...d,
+        title: d.title || '',
+        summary: d.summary || ''
+      })) : [];
+    }
+
+    async function fetchDocumentariesFromFirestore(){
+      if(!window.firebase?.firestore) return [];
+      const snapshot = await firebase.firestore().collection('documentaries').get();
+      return normalizeDocumentaries(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+    }
+
     async function fetchDocumentaries(){
-      const res = await fetch('/api/documentaries');
-      if(!res.ok) throw new Error('Failed to fetch documentaries');
-      return res.json();
+      try{
+        const res = await fetch('/api/documentaries');
+        if(!res.ok) throw new Error('Failed to fetch documentaries');
+        const docs = normalizeDocumentaries(await res.json());
+        if(docs.length > 0) return docs;
+      }catch(e){
+        console.warn('Backend documentaries fetch failed, trying Firestore directly:', e);
+      }
+
+      return fetchDocumentariesFromFirestore();
     }
 
     async function checkUserAccess(phone){
@@ -157,6 +195,17 @@
       const previewTitleEl = document.getElementById('previewTitle');
       const previewPayBtn = document.getElementById('previewPayBtn');
 
+      function showVideo(video, wrap, url){
+        if(!video || !wrap || !url) return false;
+        video.src = url;
+        video.load();
+        wrap.classList.remove('hidden');
+        video.addEventListener('error', () => {
+          const errorText = video.error ? `Media error ${video.error.code}` : 'Media error';
+          wrap.insertAdjacentHTML('beforeend', `<div class="p-4 border-t border-white/5 text-sm text-red-300">${errorText}. <a class="underline" href="${url}" target="_blank" rel="noopener">Open video directly</a></div>`);
+        }, { once: true });
+        return true;
+      }
 
       if(!docId){
         titleEl.textContent = 'Documentary not found';
@@ -198,12 +247,7 @@
             previewTitleEl.textContent = `Trailer: ${doc.title || 'Documentary'}`;
           }
 
-          if(trailerUrl && previewVideoEl){
-            previewVideoEl.src = trailerUrl;
-            previewVideoEl.addEventListener('loadedmetadata', () => {
-              previewWrap?.classList.remove('hidden');
-            }, { once: true });
-          }else{
+          if(!showVideo(previewVideoEl, previewWrap, trailerUrl)){
             // If no trailer exists, fallback to the payment gate.
             previewWrap?.classList.add('hidden');
             gateEl?.classList.remove('hidden');
@@ -222,10 +266,7 @@
 
         // Best-effort anti-download UX: nodownload controlsList.
         // True protection must be enforced via Cloudinary delivery/auth rules.
-        videoEl.src = doc.cloudinaryUrl;
-        videoEl.addEventListener('loadedmetadata', () => {
-          playerWrap?.classList.remove('hidden');
-        }, { once: true });
+        showVideo(videoEl, playerWrap, doc.cloudinaryUrl);
       }catch(e){
         console.error(e);
         titleEl.textContent = 'Unable to load player';
