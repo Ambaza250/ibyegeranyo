@@ -172,12 +172,105 @@
       return fetchDocumentariesFromFirestore();
     }
 
+    function normalizePhone(phone){
+      return String(phone || '').replace(/\D/g, '');
+    }
+
+    function uniqueValues(values){
+      return [...new Set(values.filter(Boolean).map(value => String(value)))];
+    }
+
+    function phoneCandidates(phone){
+      const normalized = normalizePhone(phone);
+      return uniqueValues([
+        normalized,
+        normalized.startsWith('250') ? normalized.slice(3) : null,
+        normalized.startsWith('0') ? `250${normalized.slice(1)}` : null,
+        normalized.length === 9 ? `0${normalized}` : null,
+        normalized.length === 9 ? `250${normalized}` : null
+      ]);
+    }
+
+    function pickUserPayment(data = {}){
+      return data.payment || data.subscription || data.account || data;
+    }
+
+    function hasConfirmedStatus(data = {}, payment = {}){
+      const values = [
+        payment.status,
+        payment.paymentStatus,
+        data.status,
+        data.accountStatus,
+        data.subscriptionStatus
+      ].map(value => String(value || '').toLowerCase());
+
+      return values.some(value => ['confirmed', 'active', 'approved', 'verified', 'paid'].includes(value))
+        || payment.confirmed === true
+        || data.confirmed === true
+        || payment.isConfirmed === true
+        || data.isConfirmed === true;
+    }
+
+    function getExpiryValue(data = {}, payment = {}){
+      return payment.expiresAt
+        || payment.endDate
+        || payment.expiryDate
+        || payment.expirationDate
+        || data.expiresAt
+        || data.endDate
+        || data.expiryDate
+        || data.expirationDate;
+    }
+
+    async function findUserByPhone(phone){
+      if(!window.firebase?.firestore) return null;
+      const users = firebase.firestore().collection('users');
+
+      for(const candidate of phoneCandidates(phone)){
+        const snap = await users.doc(candidate).get();
+        if(snap.exists) return { id: snap.id, data: snap.data() || {} };
+      }
+
+      for(const candidate of phoneCandidates(phone)){
+        const snap = await users.where('phone', '==', candidate).limit(1).get();
+        if(!snap.empty){
+          const doc = snap.docs[0];
+          return { id: doc.id, data: doc.data() || {} };
+        }
+      }
+
+      return null;
+    }
+
+    async function checkUserAccessFromFirestore(phone){
+      const user = await findUserByPhone(phone);
+      if(!user) return false;
+
+      const data = user.data || {};
+      const payment = pickUserPayment(data);
+      if(!payment || !hasConfirmedStatus(data, payment)) return false;
+
+      const expiresAtRaw = getExpiryValue(data, payment);
+      if(expiresAtRaw){
+        const expiresAt = new Date(expiresAtRaw).getTime();
+        if(!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return false;
+      }
+
+      return true;
+    }
+
     async function checkUserAccess(phone){
       if(!phone) return false;
       const qs = new URLSearchParams({ phone });
-      const res = await fetch(`/api/me/access?${qs.toString()}`);
-      const data = await res.json();
-      return data && data.hasAccess === true;
+      try{
+        const res = await fetch(`/api/me/access?${qs.toString()}`);
+        const data = await res.json();
+        if(data && data.hasAccess === true) return true;
+      }catch(e){
+        console.warn('Backend access check failed, trying Firestore directly:', e);
+      }
+
+      return checkUserAccessFromFirestore(phone);
     }
 
     async function start(){

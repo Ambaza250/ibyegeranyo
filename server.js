@@ -155,6 +155,85 @@ function doesPasswordMatch(payment, password) {
   return String(payment.momoPassword) === String(password);
 }
 
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean).map(value => String(value)))];
+}
+
+function phoneCandidates(phone) {
+  const normalized = normalizePhone(phone);
+  return uniqueValues([
+    normalized,
+    normalized.startsWith('250') ? normalized.slice(3) : null,
+    normalized.startsWith('0') ? `250${normalized.slice(1)}` : null,
+    normalized.length === 9 ? `0${normalized}` : null,
+    normalized.length === 9 ? `250${normalized}` : null
+  ]);
+}
+
+function pickUserPayment(data = {}) {
+  return data.payment || data.subscription || data.account || data;
+}
+
+function hasConfirmedStatus(data = {}, payment = {}) {
+  const values = [
+    payment.status,
+    payment.paymentStatus,
+    data.status,
+    data.accountStatus,
+    data.subscriptionStatus
+  ].map(value => String(value || '').toLowerCase());
+
+  return values.some(value => ['confirmed', 'active', 'approved', 'verified', 'paid'].includes(value))
+    || payment.confirmed === true
+    || data.confirmed === true
+    || payment.isConfirmed === true
+    || data.isConfirmed === true;
+}
+
+function getExpiryValue(data = {}, payment = {}) {
+  return payment.expiresAt
+    || payment.endDate
+    || payment.expiryDate
+    || payment.expirationDate
+    || data.expiresAt
+    || data.endDate
+    || data.expiryDate
+    || data.expirationDate;
+}
+
+function matchesAccessPassword(data = {}, payment = {}, password) {
+  if (password === undefined || password === null || String(password).length === 0) return true;
+  const expectedValues = [
+    payment.momoPassword,
+    payment.password,
+    payment.accountPassword,
+    data.momoPassword,
+    data.password,
+    data.accountPassword
+  ].filter(value => value !== undefined && value !== null);
+
+  return expectedValues.some(value => String(value) === String(password));
+}
+
+async function findUserByPhone(phone) {
+  for (const candidate of phoneCandidates(phone)) {
+    const snap = await db.collection('users').doc(candidate).get();
+    if (snap.exists) {
+      return { id: snap.id, data: snap.data() || {} };
+    }
+  }
+
+  for (const candidate of phoneCandidates(phone)) {
+    const snap = await db.collection('users').where('phone', '==', candidate).limit(1).get();
+    if (!snap.empty) {
+      const doc = snap.docs[0];
+      return { id: doc.id, data: doc.data() || {} };
+    }
+  }
+
+  return null;
+}
+
 
 // ====================== ROUTES ======================
 app.get('/', (req, res) => res.sendFile(path.resolve(process.cwd(), 'index.html')));
@@ -571,43 +650,34 @@ app.get('/api/me/access', async (req, res) => {
     const { phone, password } = req.query;
     if (!phone) return res.json({ hasAccess: false });
 
-    const normalizedPhone = normalizePhone(phone);
-    const userSnap = await db.collection('users').doc(normalizedPhone).get();
-    if (!userSnap.exists) {
+    const user = await findUserByPhone(phone);
+    if (!user) {
       return res.json({ hasAccess: false, reason: 'NO_ACCOUNT' });
     }
 
-    const data = userSnap.data() || {};
-    const payment = data.payment || data.subscription || null;
+    const data = user.data || {};
+    const payment = pickUserPayment(data);
     if (!payment) {
       return res.json({ hasAccess: false, reason: 'NO_PAYMENT' });
     }
 
-    // Metrics from your verified firestore structure:
-    // status must be confirmed, expiry must be in the future
-    const status = String(payment.status || '').toLowerCase();
-    if (status !== 'confirmed') {
+    if (!hasConfirmedStatus(data, payment)) {
       return res.json({ hasAccess: false, reason: 'NOT_CONFIRMED' });
     }
 
-    const expiresAtRaw = payment.expiresAt || payment.endDate;
-    if (!expiresAtRaw) {
-      return res.json({ hasAccess: false, reason: 'NO_EXPIRES' });
-    }
-
-    const expiresAt = new Date(expiresAtRaw).getTime();
-    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
-      return res.json({ hasAccess: false, reason: 'NOT_ACTIVE' });
-    }
-
-    // Password match only when password is provided (login passes it)
-    if (password !== undefined && password !== null && String(password).length > 0) {
-      if (String(payment.momoPassword) !== String(password)) {
-        return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
+    const expiresAtRaw = getExpiryValue(data, payment);
+    if (expiresAtRaw) {
+      const expiresAt = new Date(expiresAtRaw).getTime();
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        return res.json({ hasAccess: false, reason: 'NOT_ACTIVE' });
       }
     }
 
-    return res.json({ hasAccess: true });
+    if (!matchesAccessPassword(data, payment, password)) {
+      return res.json({ hasAccess: false, reason: 'BAD_PASSWORD' });
+    }
+
+    return res.json({ hasAccess: true, phone: user.id });
   } catch (e) {
     console.error('me/access error:', e);
     res.json({ hasAccess: false });
