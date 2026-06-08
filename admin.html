@@ -382,7 +382,10 @@ uploadForm.addEventListener('submit', async (e) => {
     // You MUST NOT expose a write token publicly for production.
     // For local/admin-only usage, you can proceed.
 
-    const BLOB_WRITE_TOKEN = (typeof window !== 'undefined' && window.VERCEL_BLOB_WRITE_TOKEN) ? window.VERCEL_BLOB_WRITE_TOKEN : '';
+    const BLOB_WRITE_TOKEN = (typeof window !== 'undefined' && window.BLOB_READ_WRITE_TOKEN)
+      ? window.BLOB_READ_WRITE_TOKEN
+      : '';
+
     if (!BLOB_WRITE_TOKEN) {
       throw new Error('Missing VERCEL_BLOB_WRITE_TOKEN in browser. Set it on window before upload.');
     }
