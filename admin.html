@@ -392,12 +392,35 @@ uploadForm.addEventListener('submit', async (e) => {
     });
 
     const serverData = await serverRes.json().catch(() => ({}));
-    if (!serverRes.ok || !serverData.success) {
-      throw new Error(serverData.error || 'Failed to get signed upload URL');
+
+    // If signed upload is not supported, immediately fall back to server streaming upload.
+    if (!serverRes.ok || !serverData.success || !serverData.url) {
+      // In this build, /api/upload-documentary uploads directly to Cloudinary + Firestore.
+      const formData = new FormData();
+      formData.append('video', file);
+      formData.append('title', title);
+      formData.append('summary', summary);
+
+      const uploadRes2 = await fetch('/api/upload-documentary', {
+        method: 'POST',
+        body: formData
+      });
+
+      const text2 = await uploadRes2.text();
+      let data2;
+      try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { error: text2 }; }
+      if (!uploadRes2.ok || !data2.success) {
+        throw new Error(data2.error || data2.message || 'Upload failed');
+      }
+
+      alert('✅ Documentary uploaded successfully!');
+      uploadForm.reset();
+      progressContainer.classList.add('hidden');
+      loadDocList();
+      return;
     }
 
     const { url: signedUrl, headers: signedHeaders } = serverData;
-    if (!signedUrl) throw new Error('Server did not return a signed upload url');
 
 // If signed upload is not supported in your @vercel/blob version, fall back
     // to server-side streaming upload endpoint.
