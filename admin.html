@@ -382,34 +382,37 @@ uploadForm.addEventListener('submit', async (e) => {
     // You MUST NOT expose a write token publicly for production.
     // For local/admin-only usage, you can proceed.
 
-// Accept multiple common token names (depending on how you injected env vars).
-    const BLOB_WRITE_TOKEN = (() => {
-      if (typeof window === 'undefined') return '';
-      return window.BLOB_READ_WRITE_TOKEN || window.VERCEL_BLOB_WRITE_TOKEN || window.VERCEL_BLOB_WRITE_TOKEN || '';
-    })();
+// Correct flow: request a short-lived signed upload from the server.
+    const pathname = `documentaries/${Date.now()}-${file.name}`;
 
-    if (!BLOB_WRITE_TOKEN) {
-      throw new Error('Missing Vercel Blob write token in browser. Set one of: window.BLOB_READ_WRITE_TOKEN or window.VERCEL_BLOB_WRITE_TOKEN before upload.');
-    }
-
-    // Dynamically import the browser bundle.
-    const mod = await import('https://cdn.jsdelivr.net/npm/@vercel/blob@0/dist/index.js');
-    const { put } = mod;
-    if (!put) {
-      throw new Error('@vercel/blob put() not available in browser bundle.');
-    }
-
-    // Upload file to Blob.
-    const blobRes = await put(file, {
-      access: 'public',
-token: BLOB_WRITE_TOKEN,
-      pathname: `documentaries/${Date.now()}-${file.name}`
+    const serverRes = await fetch('/api/documentaries/blob-signed-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pathname })
     });
 
-    const blobUrl = typeof blobRes?.url === 'string' ? blobRes.url : '';
-    if (!blobUrl) {
-      throw new Error('Blob upload succeeded but no blobUrl returned.');
+    const serverData = await serverRes.json().catch(() => ({}));
+    if (!serverRes.ok || !serverData.success) {
+      throw new Error(serverData.error || 'Failed to get signed upload URL');
     }
+
+    const { url: signedUrl, headers: signedHeaders } = serverData;
+    if (!signedUrl) throw new Error('Server did not return a signed upload url');
+
+    // Upload directly to the signed URL.
+    const blobUploadRes = await fetch(signedUrl, {
+      method: 'PUT',
+      headers: signedHeaders || {},
+      body: file
+    });
+
+    if (!blobUploadRes.ok) {
+      throw new Error(`Signed upload failed (${blobUploadRes.status})`);
+    }
+
+    // Derive blobUrl from pathname (signedUrl is an upload endpoint; the public URL is the pathname).
+    const blobUrl = signedUrl.split('?')[0];
+    if (!blobUrl) throw new Error('Signed upload succeeded but blobUrl could not be determined');
 
     const res = await fetch('/api/documentaries/upload-from-blob', {
       method: 'POST',
