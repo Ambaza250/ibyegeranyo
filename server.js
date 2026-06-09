@@ -590,27 +590,13 @@ app.post('/api/documentaries/blob-signed-upload', express.json(), async (req, re
     // Import dynamically to avoid any runtime issues when the function isn't used.
     const mod = await import('@vercel/blob');
 
-    // @vercel/blob exposes `put` for server usage. We can generate a signed URL by
-    // doing a lightweight `put` with an empty body in newer versions, but your version
-    // may differ. So we fall back to a deterministic approach supported in this codebase:
-    // use `put` with { access, token, pathname } and request a pre-signed URL capability.
-    //
-    // If your @vercel/blob version does not support `getSignedUrl`, this endpoint
-    // will fail with a clear message.
-    if (typeof mod.getSignedUrl !== 'function') {
-      return res.status(501).json({
-        error: 'This @vercel/blob version does not expose getSignedUrl(). Use @vercel/blob >= 0.27 with getSignedUrl, or update dependencies.'
-      });
-    }
-
-    const { url, headers } = await mod.getSignedUrl({
-      pathname: safePath,
-      access: 'public'
-    }, {
-      token
+    // Your @vercel/blob version (0.27.0) does not expose getSignedUrl().
+    // In that case, we cannot do a “signed URL + browser PUT” flow.
+    // Instead, we return an instruction to fall back to streaming upload.
+    // (This keeps write token off the browser.)
+    return res.status(501).json({
+      error: 'getSignedUrl() is not available in @vercel/blob@0.27.0. Use server streaming upload (POST /api/documentaries/upload-from-blob) or upgrade @vercel/blob.'
     });
-
-    return res.json({ success: true, url, headers });
   } catch (e) {
     console.error('blob-signed-upload error:', e);
     res.status(500).json({ error: e.message || String(e) });

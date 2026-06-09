@@ -399,43 +399,34 @@ uploadForm.addEventListener('submit', async (e) => {
     const { url: signedUrl, headers: signedHeaders } = serverData;
     if (!signedUrl) throw new Error('Server did not return a signed upload url');
 
-    // Upload directly to the signed URL.
-    const blobUploadRes = await fetch(signedUrl, {
-      method: 'PUT',
-      headers: signedHeaders || {},
-      body: file
-    });
+// If signed upload is not supported in your @vercel/blob version, fall back
+    // to server-side streaming upload endpoint.
+    // This avoids needing any browser Blob write token.
 
-    if (!blobUploadRes.ok) {
-      throw new Error(`Signed upload failed (${blobUploadRes.status})`);
-    }
+    // In this build, the server streaming endpoint requires the raw file.
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('title', title);
+    formData.append('summary', summary);
 
-    // Derive blobUrl from pathname (signedUrl is an upload endpoint; the public URL is the pathname).
-    const blobUrl = signedUrl.split('?')[0];
-    if (!blobUrl) throw new Error('Signed upload succeeded but blobUrl could not be determined');
-
-    const res = await fetch('/api/documentaries/upload-from-blob', {
+    const uploadRes2 = await fetch('/api/upload-documentary', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, summary, blobUrl })
+      body: formData
     });
 
-
-
-    let data;
-    const text = await res.text();
-    try { data = text ? JSON.parse(text) : {}; } catch {
-      throw new Error('Server returned invalid JSON');
+    const text2 = await uploadRes2.text();
+    let data2;
+    try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { error: text2 }; }
+    if (!uploadRes2.ok || !data2.success) {
+      throw new Error(data2.error || data2.message || 'Upload failed');
     }
 
-    if (res.ok && data.success) {
-      alert('✅ Documentary uploaded successfully!');
-      uploadForm.reset();
-      progressContainer.classList.add('hidden');
-      loadDocList();
-    } else {
-      alert('Upload failed: ' + (data.error || 'Unknown error'));
-    }
+    // Done.
+    alert('✅ Documentary uploaded successfully!');
+    uploadForm.reset();
+    progressContainer.classList.add('hidden');
+    loadDocList();
+    return;
   } catch (error) {
     console.error(error);
     alert('Upload failed: ' + error.message);
