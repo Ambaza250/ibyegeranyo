@@ -382,12 +382,14 @@ uploadForm.addEventListener('submit', async (e) => {
     // You MUST NOT expose a write token publicly for production.
     // For local/admin-only usage, you can proceed.
 
-    const BLOB_WRITE_TOKEN = (typeof window !== 'undefined' && window.BLOB_READ_WRITE_TOKEN)
-      ? window.BLOB_READ_WRITE_TOKEN
-      : '';
+// Accept multiple common token names (depending on how you injected env vars).
+    const BLOB_WRITE_TOKEN = (() => {
+      if (typeof window === 'undefined') return '';
+      return window.BLOB_READ_WRITE_TOKEN || window.VERCEL_BLOB_WRITE_TOKEN || window.VERCEL_BLOB_WRITE_TOKEN || '';
+    })();
 
     if (!BLOB_WRITE_TOKEN) {
-      throw new Error('Missing VERCEL_BLOB_WRITE_TOKEN in browser. Set it on window before upload.');
+      throw new Error('Missing Vercel Blob write token in browser. Set one of: window.BLOB_READ_WRITE_TOKEN or window.VERCEL_BLOB_WRITE_TOKEN before upload.');
     }
 
     // Dynamically import the browser bundle.
@@ -400,7 +402,7 @@ uploadForm.addEventListener('submit', async (e) => {
     // Upload file to Blob.
     const blobRes = await put(file, {
       access: 'public',
-      token: BLOB_WRITE_TOKEN,
+token: BLOB_WRITE_TOKEN,
       pathname: `documentaries/${Date.now()}-${file.name}`
     });
 
