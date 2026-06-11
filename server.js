@@ -18,11 +18,13 @@ const app = express();
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd())));
 
+const TMP_DIR = path.join(process.cwd(), 'tmp-uploads');
+
 // Use disk storage so large videos don't need to fit into RAM.
 // This prevents crashes/timeouts on big uploads.
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, path.join(process.cwd(), 'tmp-uploads')),
+    destination: (req, file, cb) => cb(null, TMP_DIR),
     filename: (req, file, cb) => {
       const safeName = String(file.originalname || 'upload')
         .replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -682,6 +684,16 @@ app.post('/api/upload-documentary-stream', upload.single('video'), async (req, r
     const publicId = `documentaries/${sanitizedTitle}-${Date.now()}`;
 
     // IMPORTANT: read from disk to avoid loading huge file into memory.
+    if (!file?.path) {
+      return res.status(400).json({ error: 'Multer did not provide file.path' });
+    }
+
+    // Debug: ensure file exists before streaming (path mismatch is a common issue on Vercel)
+    const exists = fs.existsSync(file.path);
+    if (!exists) {
+      console.error('[upload-documentary-stream] file.path missing on disk', { filePath: file.path });
+    }
+
     const uploadResult = await new Promise((resolve, reject) => {
       const readStream = fs.createReadStream(file.path);
 
@@ -698,6 +710,7 @@ app.post('/api/upload-documentary-stream', upload.single('video'), async (req, r
         }
       ).end(readStream);
     });
+
 
     const docData = {
       title: String(title).trim(),
