@@ -88,7 +88,7 @@ const firebaseAdmin = initializeApp({
 
 function withTimeout(promise, ms, message) {
   let timer;
-  return Promise.race([
+   return Promise.race([
     promise,
     new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error(message)), ms);
@@ -663,6 +663,63 @@ app.post('/api/documentaries/upload-from-blob', express.json(), async (req, res)
 });
 
 
+// Stream-friendly endpoint for large admin uploads: disk -> Cloudinary stream -> Firestore
+app.post('/api/upload-documentary-stream', upload.single('video'), async (req, res) => {
+  try {
+    const isAdmin = req.cookies.admin === 'true' || req.headers['x-admin'] === 'true';
+    if (!isAdmin) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { title, summary } = req.body;
+    const file = req.file;
+
+    if (!title || !file) {
+      return res.status(400).json({ error: 'Title and video file are required' });
+    }
+
+    const sanitizedTitle = String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const publicId = `documentaries/${sanitizedTitle}-${Date.now()}`;
+
+    // IMPORTANT: read from disk to avoid loading huge file into memory.
+    const uploadResult = await new Promise((resolve, reject) => {
+      const readStream = fs.createReadStream(file.path);
+
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'video',
+          public_id: publicId,
+          folder: 'aime-christian-documentaries',
+          chunk_size: 6000000
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      ).end(readStream);
+    });
+
+    const docData = {
+      title: String(title).trim(),
+      summary: String(summary || '').trim(),
+      cloudinaryUrl: uploadResult.secure_url,
+      thumbnail: uploadResult.thumbnail_url || null,
+      duration: 'HD',
+      uploadedAt: new Date().toISOString()
+    };
+
+    const docRef = await db.collection('documentaries').add(docData);
+
+    // best-effort cleanup
+    try { await fsp.unlink(file.path); } catch {}
+
+    res.json({ success: true, id: docRef.id, documentary: docData });
+  } catch (error) {
+    console.error('Upload documentary stream error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Backward-compatible endpoint (small uploads only). Keep it but don’t use it for big videos.
 app.post('/api/upload-documentary', upload.single('video'), async (req, res) => {
   try {
@@ -672,6 +729,23 @@ app.post('/api/upload-documentary', upload.single('video'), async (req, res) => 
 
     const { title, summary } = req.body;
     const file = req.file;
+
+    console.log('[upload-documentary] body fields:', {
+      title,
+      summaryLen: summary ? String(summary).length : 0
+    });
+    console.log('[upload-documentary] multer file:', {
+      originalname: file?.originalname,
+      mimetype: file?.mimetype,
+      size: file?.size,
+      path: file?.path
+    });
+
+    console.log('[upload-documentary] cloudinary config present:', {
+      cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: !!process.env.CLOUDINARY_API_KEY,
+      api_secret: !!process.env.CLOUDINARY_API_SECRET
+    });
 
     if (!title || !file) {
       return res.status(400).json({ error: 'Title and video file are required' });
@@ -826,6 +900,23 @@ app.get('/api/me/access', async (req, res) => {
 });
 
 
+
+// ====================== ERROR HANDLING & DEBUG LOGGING ======================
+app.use((req, res, next) => {
+  console.log(`[req] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+app.use((err, req, res, next) => {
+  console.error('[error]', {
+    message: err?.message,
+    stack: err?.stack,
+    path: req?.originalUrl,
+    method: req?.method
+  });
+  const status = err?.statusCode || err?.status || 500;
+  res.status(status).json({ error: err?.message || 'Internal Server Error' });
+});
 
 app.listen(APP_PORT, () => {
   console.log(`🚀 Server running on port ${APP_PORT}`);

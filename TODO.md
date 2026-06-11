@@ -1,8 +1,11 @@
 # TODO
 
-- [ ] Add server endpoint to create a short-lived Vercel Blob signed upload (no browser write token).
-- [ ] Update admin.html upload flow to request the signed upload from server, then upload to Blob using only the signed URL/capability.
-- [ ] Remove/disable current window.BLOB_READ_WRITE_TOKEN/VERCEL_BLOB_WRITE_TOKEN checks and related debug logging.
-- [ ] Ensure `/api/documentaries/upload-from-blob` still receives `blobUrl` and Cloudinary upload works.
-- [ ] Test end-to-end upload from admin page.
+## Vercel Blob admin upload troubleshooting
+
+- [ ] Inspect client code paths for document upload (admin.html)
+- [ ] Add client fallback behavior to avoid requiring Vercel Blob write token in browser
+- [ ] When fallback runs, identify why server returns `Internal Server Error` for `/api/upload-documentary`
+- [ ] Add request/endpoint logging + centralized Express error handler in `server.js`
+- [ ] Retry upload and capture server log output showing the real exception
+- [ ] Fix root cause (Cloudinary config, missing tmp-uploads file, auth cookie, multer parsing, Firestore init, etc.)
 
