@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Metadata } from 'next';
 import { getAllDocumentaries } from '@/lib/db';
 import { DocumentaryCard } from '@/components/DocumentaryCard';
