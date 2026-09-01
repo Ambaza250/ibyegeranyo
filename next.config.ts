@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: [
+    "@vercel/blob",
+    "undici",
+    "cloudinary",
+    "firebase-admin",
+  ],
 };
 
 export default nextConfig;
