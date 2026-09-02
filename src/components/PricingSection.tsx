@@ -45,7 +45,7 @@ export function PricingSection() {
                 ))}
               </ul>
               <Link
-                href="/register"
+                href={`/register?plan=${plan.id}`}
                 className={`block text-center py-2 rounded font-medium transition-colors ${
                   plan.id === 'monthly'
                     ? 'btn-primary'

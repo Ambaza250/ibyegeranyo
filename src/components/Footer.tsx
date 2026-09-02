@@ -20,7 +20,7 @@ export function Footer() {
             </div>
             <p className="text-text-muted text-sm max-w-md">
               The central destination for documentaries and current stories from Rwanda and abroad. 
-              Premium, ad-free access to Aime Christian's investigations and documentaries.
+              Premium, ad-free access to Aime Christian&apos;s investigations and documentaries.
             </p>
             <div className="flex gap-4 mt-6">
               <a

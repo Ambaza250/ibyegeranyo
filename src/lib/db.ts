@@ -7,38 +7,28 @@ import { PLANS } from './types';
 
 export async function getAllDocumentaries(): Promise<Documentary[]> {
   const db = getDb();
-  const snapshot = await db
-    .collection(collections.documentaries)
-    .where('status', '==', 'published')
-    .orderBy('createdAt', 'desc')
-    .get();
-  
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Documentary);
+  // Older records may predate the `status` field. Treat those as published so
+  // existing catalog content remains visible; only explicitly hidden records
+  // are excluded from the public library.
+  const snapshot = await db.collection(collections.documentaries).get();
+  return snapshot.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }) as Documentary)
+    .filter((documentary) => documentary.status !== 'draft' && documentary.status !== 'archived')
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 export async function getFeaturedDocumentaries(): Promise<Documentary[]> {
   const db = getDb();
-  const snapshot = await db
-    .collection(collections.documentaries)
-    .where('status', '==', 'published')
-    .where('featured', '==', true)
-    .orderBy('createdAt', 'desc')
-    .limit(10)
-    .get();
-  
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Documentary);
+  const snapshot = await db.collection(collections.documentaries).get();
+  return snapshot.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }) as Documentary)
+    .filter((documentary) => documentary.featured && documentary.status !== 'draft' && documentary.status !== 'archived')
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .slice(0, 10);
 }
 
 export async function getRecentDocumentaries(limit: number = 10): Promise<Documentary[]> {
-  const db = getDb();
-  const snapshot = await db
-    .collection(collections.documentaries)
-    .where('status', '==', 'published')
-    .orderBy('createdAt', 'desc')
-    .limit(limit)
-    .get();
-  
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Documentary);
+  return (await getAllDocumentaries()).slice(0, limit);
 }
 
 export async function getDocumentaryById(id: string): Promise<Documentary | null> {
@@ -158,7 +148,6 @@ export async function createPayment(data: {
   await db.collection(collections.users).doc(data.userId).update({
     paymentId: id,
     paymentStatus: 'pending',
-    selectedPlan: data.plan,
     amount: data.amount,
     updatedAt: now,
   });
@@ -244,13 +233,10 @@ export async function confirmPayment(
     expiresAt: expiryDate.toISOString(),
   });
   
-  // Update user subscription
+  // A single-documentary purchase is a scoped entitlement, not a subscription.
+  // Keep an existing full subscription intact when confirming one.
   const userUpdate: Record<string, unknown> = {
-    subscriptionStatus: 'active',
     paymentStatus: 'confirmed',
-    startDate: nowISO,
-    endDate: expiryDate.toISOString(),
-    expiresAt: expiryDate.toISOString(),
     updatedAt: nowISO,
   };
   
@@ -265,6 +251,12 @@ export async function confirmPayment(
         userUpdate.documentaryIds = documentaryIds;
       }
     }
+  } else {
+    userUpdate.subscriptionStatus = 'active';
+    userUpdate.selectedPlan = payment.plan;
+    userUpdate.startDate = nowISO;
+    userUpdate.endDate = expiryDate.toISOString();
+    userUpdate.expiresAt = expiryDate.toISOString();
   }
   
   await db.collection(collections.users).doc(payment.userId).update(userUpdate);

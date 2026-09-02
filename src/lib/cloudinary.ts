@@ -55,6 +55,21 @@ export async function uploadToCloudinary(
   });
 }
 
+// Let Cloudinary fetch a public Vercel Blob directly. This avoids buffering a
+// potentially multi-gigabyte video in the serverless function's memory.
+export async function uploadUrlToCloudinary(
+  sourceUrl: string,
+  options: { folder?: string; resourceType?: 'video' | 'image' } = {}
+): Promise<CloudinaryUploadResult> {
+  const result = await cloudinary.uploader.upload(sourceUrl, {
+    folder: options.folder || 'ibyegeranyo/documentaries',
+    resource_type: options.resourceType || 'video',
+    overwrite: true,
+    invalidate: true,
+  });
+  return { publicId: result.public_id, secureUrl: result.secure_url, duration: result.duration, format: result.format, bytes: result.bytes };
+}
+
 // Get video thumbnail from Cloudinary
 export function getVideoThumbnail(publicId: string, options: {
   width?: number;

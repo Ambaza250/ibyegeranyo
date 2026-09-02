@@ -35,6 +35,8 @@ export function Navbar() {
   };
 
   useEffect(() => {
+    // The session is an external source; this runs once after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUser();
   }, []);
 
@@ -59,6 +61,12 @@ export function Navbar() {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
+
+  // The admin workspace has its own navigation. Rendering the public fixed
+  // navbar there overlays the dashboard tabs and prevents them being clicked.
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
@@ -99,7 +107,7 @@ export function Navbar() {
                 {user ? (
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className="text-sm text-text-secondary">{user.fullName}</div>
+                      <Link href="/account" className="text-sm text-text-secondary hover:text-white">{user.fullName}</Link>
                       <div className={`text-xs ${
                         user.subscriptionStatus === 'active' ? 'text-green-500' :
                         user.subscriptionStatus === 'pending' ? 'text-yellow-500' :
@@ -169,6 +177,7 @@ export function Navbar() {
               {user ? (
                 <>
                   <div className="text-sm text-text-secondary">{user.fullName}</div>
+                  <Link href="/account" onClick={() => setIsOpen(false)} className="block text-sm text-text-muted hover:text-white">My account</Link>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 text-sm text-text-muted hover:text-white"

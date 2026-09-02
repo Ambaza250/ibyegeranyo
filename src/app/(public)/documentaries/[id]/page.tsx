@@ -32,10 +32,15 @@ export default async function DocumentaryPage({ params }: PageProps) {
 
   const user = await getCurrentUser();
   const access = await checkDocumentaryAccess(user?.id, id);
+  // This client component is also used for the public preview. Never serialize
+  // protected Cloudinary URLs into that response for an unauthorised visitor.
+  const safeDocumentary = access.hasAccess
+    ? documentary
+    : { ...documentary, videoUrl: null, cloudinarySecureUrl: null, cloudinaryPublicId: null };
 
   return (
     <div className="min-h-screen pt-20">
-      <DocumentaryDetail documentary={documentary} hasAccess={access.hasAccess} />
+      <DocumentaryDetail documentary={safeDocumentary} hasAccess={access.hasAccess} />
     </div>
   );
 }

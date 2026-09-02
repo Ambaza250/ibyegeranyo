@@ -25,20 +25,9 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content */}
         <div className="lg:col-span-2">
-          {/* Video player area */}
+          {/* Preview area: protected playback lives on the dedicated player route. */}
           <div className="video-container aspect-video mb-6">
-            {hasAccess && documentary.videoUrl ? (
-              <video
-                controls
-                controlsList="nodownload"
-                className="w-full h-full"
-                poster={documentary.thumbnailUrl || undefined}
-              >
-                <source src={documentary.videoUrl} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <div className="w-full h-full bg-surface flex flex-col items-center justify-center">
+              <div className="relative w-full h-full bg-surface flex flex-col items-center justify-center">
                 {documentary.thumbnailUrl ? (
                   <Image
                     src={documentary.thumbnailUrl}
@@ -52,21 +41,14 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
                     <Play className="w-10 h-10 text-primary" />
                   </div>
                   <h3 className="text-white text-xl font-semibold mb-2">
-                    {hasAccess ? 'Loading...' : 'Premium Content'}
+                    {hasAccess ? 'Ready to watch' : 'Premium Content'}
                   </h3>
                   <p className="text-text-muted mb-4">
-                    {hasAccess
-                      ? 'Preparing your video...'
-                      : 'Subscribe to watch this documentary'}
+                    {hasAccess ? 'Open the distraction-free player when you are ready.' : 'Subscribe to watch this documentary'}
                   </p>
-                  {!hasAccess && (
-                    <Link href="/pricing" className="btn-primary">
-                      Subscribe Now
-                    </Link>
-                  )}
+                  <Link href={hasAccess ? `/player?doc=${documentary.id}` : `/pricing`} className="btn-primary">{hasAccess ? 'Open player' : 'Subscribe now'}</Link>
                 </div>
               </div>
-            )}
           </div>
 
           {/* Trailer section for non-subscribers */}
@@ -154,9 +136,10 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
                 <p className="text-text-muted text-sm mt-2 mb-4">
                   Subscribe to watch this documentary
                 </p>
-                <Link href="/pricing" className="btn-primary w-full">
+                <Link href={`/pricing`} className="btn-primary w-full">
                   Subscribe Now
                 </Link>
+                <Link href={`/register?plan=single&doc=${documentary.id}`} className="mt-3 inline-block text-sm text-text-muted underline">Buy only this documentary · 200 RWF</Link>
               </div>
             )}
           </div>

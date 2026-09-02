@@ -3,14 +3,14 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { getDb, collections } from './firebase';
 import { normalizePhone, generateId } from './utils';
-import type { User, Session, AdminSession, AdminUser } from './types';
+import type { User, Session, AdminSession, AdminUser, Payment } from './types';
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'ibyegeranyo-secret-key-change-in-production'
+  process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'ibyegeranyo-development-secret')
 );
 
 const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || 'ibyegeranyo-admin-secret-key-change-in-production'
+  process.env.ADMIN_JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'ibyegeranyo-development-admin-secret')
 );
 
 // Hash password
@@ -25,6 +25,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 // Create user session token
 export async function createSessionToken(session: Session): Promise<string> {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') throw new Error('JWT_SECRET is not configured');
   return new SignJWT({ ...session })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -44,6 +45,7 @@ export async function verifySessionToken(token: string): Promise<Session | null>
 
 // Create admin session token
 export async function createAdminSessionToken(session: AdminSession): Promise<string> {
+  if (!process.env.ADMIN_JWT_SECRET && process.env.NODE_ENV === 'production') throw new Error('ADMIN_JWT_SECRET is not configured');
   return new SignJWT({ ...session })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -262,22 +264,23 @@ export async function checkDocumentaryAccess(
   
   const user = userDoc.data() as User;
   
-  // Check if subscription is active
-  if (user.subscriptionStatus !== 'active') {
-    return { hasAccess: false, reason: 'no_active_subscription' };
+  // A full subscription is evaluated from server-maintained dates only.
+  if (user.subscriptionStatus === 'active' && user.selectedPlan !== 'single' && user.expiresAt && new Date(user.expiresAt) >= new Date()) {
+    return { hasAccess: true, reason: 'access_granted' };
   }
-  
-  // Check if subscription has expired
-  if (user.expiresAt && new Date(user.expiresAt) < new Date()) {
-    return { hasAccess: false, reason: 'subscription_expired' };
-  }
-  
-  // For single documentary plans, check if user has access to this specific documentary
-  if (user.selectedPlan === 'single' && user.documentaryIds.length > 0) {
-    if (!user.documentaryIds.includes(documentaryId)) {
-      return { hasAccess: false, reason: 'documentary_not_included' };
-    }
-  }
-  
-  return { hasAccess: true, reason: 'access_granted' };
+
+  // Individual purchases are independent entitlements. Do not infer access from
+  // the latest selected plan: a later purchase must not revoke a valid one.
+  const entitlement = await db.collection(collections.payments)
+    .where('userId', '==', userId)
+    .where('documentaryId', '==', documentaryId)
+    .where('plan', '==', 'single')
+    .where('status', '==', 'confirmed')
+    .get();
+  const hasSingleAccess = entitlement.docs.some((doc) => {
+    const payment = doc.data() as Payment;
+    return !!payment.expiresAt && new Date(payment.expiresAt) >= new Date();
+  });
+  if (hasSingleAccess) return { hasAccess: true, reason: 'single_documentary_access' };
+  return { hasAccess: false, reason: user.expiresAt && new Date(user.expiresAt) < new Date() ? 'subscription_expired' : 'no_active_subscription' };
 }

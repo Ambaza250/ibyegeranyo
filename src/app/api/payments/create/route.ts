@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createPayment } from '@/lib/db';
+import { createPayment, getDocumentaryById } from '@/lib/db';
 import { PLANS } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -39,6 +39,12 @@ export async function POST(request: NextRequest) {
         { error: 'Documentary ID is required for single documentary plan' },
         { status: 400 }
       );
+    }
+    if (plan === 'single' && documentaryId) {
+      const documentary = await getDocumentaryById(documentaryId);
+      if (!documentary || documentary.status !== 'published') {
+        return NextResponse.json({ error: 'Documentary not found' }, { status: 404 });
+      }
     }
 
     // Create payment with server-determined amount

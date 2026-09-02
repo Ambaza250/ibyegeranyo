@@ -59,7 +59,7 @@ export async function uploadVideoPipeline(
   cloudinarySecureUrl: string;
   duration?: number;
 }> {
-  const { uploadToCloudinary } = await import('./cloudinary');
+  const { uploadUrlToCloudinary } = await import('./cloudinary');
   
   // Step 1: Upload to Vercel Blob
   const blobResult = await uploadToBlob(
@@ -72,38 +72,20 @@ export async function uploadVideoPipeline(
     options.onProgress(30);
   }
 
-  // Step 2: Download from Blob as buffer
-  const fileBuffer = await downloadFileAsBuffer(blobResult.url);
-
-  if (options.onProgress) {
-    options.onProgress(60);
-  }
-
-  // Step 3: Upload to Cloudinary
-  const cloudinaryResult = await uploadToCloudinary(fileBuffer, {
-    folder: options.folder || 'ibyegeranyo/documentaries',
-    resourceType: 'video',
-  });
-
-  if (options.onProgress) {
-    options.onProgress(90);
-  }
-
-  // Step 4: Clean up temporary blob
   try {
-    await deleteFromBlob(blobResult.url);
-  } catch {
-    // Ignore cleanup errors
+    // Step 2: Cloudinary fetches the temporary public Blob itself. Do not
+    // download the file into a Node Buffer: that would exceed most deployments'
+    // memory limits for long-form video.
+    const cloudinaryResult = await uploadUrlToCloudinary(blobResult.url, {
+      folder: options.folder || 'ibyegeranyo/documentaries', resourceType: 'video',
+    });
+    if (options.onProgress) options.onProgress(90);
+    if (options.onProgress) options.onProgress(100);
+    return { blobUrl: blobResult.url, cloudinaryPublicId: cloudinaryResult.publicId, cloudinarySecureUrl: cloudinaryResult.secureUrl, duration: cloudinaryResult.duration };
+  } finally {
+    // Always clean up temporary storage, including Cloudinary failure paths.
+    // A cleanup failure is intentionally non-fatal: the primary upload result
+    // must not be hidden after Cloudinary has completed successfully.
+    try { await deleteFromBlob(blobResult.url); } catch { /* best effort */ }
   }
-
-  if (options.onProgress) {
-    options.onProgress(100);
-  }
-
-  return {
-    blobUrl: blobResult.url,
-    cloudinaryPublicId: cloudinaryResult.publicId,
-    cloudinarySecureUrl: cloudinaryResult.secureUrl,
-    duration: cloudinaryResult.duration,
-  };
 }

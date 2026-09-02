@@ -1,0 +1,4 @@
+import type { Metadata } from 'next';
+import { PricingSection } from '@/components/PricingSection';
+export const metadata: Metadata = { title: 'Pricing | Aime Christian Documentaries', description: 'Choose flexible documentary access through MTN MoMo payment verification.', alternates: { canonical: '/pricing' } };
+export default function PricingPage() { return <div className="pt-16"><section className="container py-16 text-center"><p className="text-gold font-semibold">MEMBERSHIP</p><h1 className="font-[family-name:var(--font-fraunces)] text-5xl md:text-7xl">Stories worth staying for.</h1><p className="mx-auto mt-5 max-w-xl text-text-muted">Pay with MTN MoMo, upload your proof, and receive access once an administrator verifies the payment.</p></section><PricingSection /></div>; }

@@ -1,6 +1,6 @@
 // check-env.js
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
 function loadEnvFile(file) {
   const full = path.join(process.cwd(), file);

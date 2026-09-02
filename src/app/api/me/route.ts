@@ -16,7 +16,12 @@ export async function GET() {
         phone: user.phone,
         subscriptionStatus: user.subscriptionStatus,
         selectedPlan: user.selectedPlan,
+        paymentStatus: user.paymentStatus,
+        amount: user.amount,
+        startDate: user.startDate,
         expiresAt: user.expiresAt,
+        endDate: user.endDate,
+        documentaryIds: user.documentaryIds,
       },
     });
   } catch (error) {
