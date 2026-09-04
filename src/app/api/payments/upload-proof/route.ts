@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+    if (payment.status !== 'pending') {
+      return NextResponse.json({ error: 'This payment can no longer accept a proof.' }, { status: 409 });
+    }
+    if (payment.proofUrl) {
+      return NextResponse.json({ error: 'A payment proof has already been submitted for this payment.' }, { status: 409 });
+    }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];

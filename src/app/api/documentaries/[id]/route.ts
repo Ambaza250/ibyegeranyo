@@ -11,7 +11,7 @@ export async function GET(
     const { id } = await params;
     const documentary = await getDocumentaryById(id);
 
-    if (!documentary) {
+    if (!documentary || documentary.status !== 'published') {
       return NextResponse.json(
         { error: 'Documentary not found' },
         { status: 404 }
@@ -25,6 +25,7 @@ export async function GET(
     // If user doesn't have access, don't expose the full video URL
     if (!access.hasAccess) {
       const { videoUrl, cloudinarySecureUrl, cloudinaryPublicId, ...safeDocumentary } = documentary;
+      void videoUrl; void cloudinarySecureUrl; void cloudinaryPublicId;
       return NextResponse.json({
         success: true,
         documentary: {

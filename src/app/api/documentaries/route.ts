@@ -21,7 +21,12 @@ export async function GET(request: Request) {
       documentaries = await getAllDocumentaries();
     }
 
-    return NextResponse.json({ success: true, documentaries });
+    // Catalog responses are public. Never serialize protected playback fields.
+    const safeDocumentaries = documentaries.map(({ videoUrl, cloudinarySecureUrl, cloudinaryPublicId, ...documentary }) => {
+      void videoUrl; void cloudinarySecureUrl; void cloudinaryPublicId;
+      return documentary;
+    });
+    return NextResponse.json({ success: true, documentaries: safeDocumentaries });
   } catch (error) {
     console.error('Error fetching documentaries:', error);
     return NextResponse.json(

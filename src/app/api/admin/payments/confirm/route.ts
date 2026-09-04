@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
         message: 'Payment confirmed successfully',
       });
     } else if (action === 'reject') {
-      await rejectPayment(paymentId);
+      const result = await rejectPayment(paymentId);
+      if (!result.success) return NextResponse.json({ error: result.error || 'Failed to reject payment' }, { status: 400 });
 
       return NextResponse.json({
         success: true,

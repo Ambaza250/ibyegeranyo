@@ -1,14 +1,19 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Play, Star, Calendar, Clock, Tag } from 'lucide-react';
 import type { Documentary } from '@/lib/types';
 
 interface DocumentaryDetailProps {
   documentary: Documentary;
   hasAccess: boolean;
+  accessReason: string;
 }
 
-export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailProps) {
+export function DocumentaryDetail({ documentary, hasAccess, accessReason }: DocumentaryDetailProps) {
+  const fallbackThumbnail = 'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/landscapes/nature-mountains.jpg';
+  const thumbnail = documentary.thumbnailUrl || fallbackThumbnail;
+  const trailerMessage = accessReason === 'not_authenticated'
+    ? 'Sign in or subscribe to watch the full documentary. Until then, you can watch the trailer.'
+    : 'Your payment has not been confirmed or your access has ended. You can watch the trailer until access is active.';
   return (
     <div className="container py-8">
       {/* Back button */}
@@ -26,16 +31,9 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
         {/* Main content */}
         <div className="lg:col-span-2">
           {/* Preview area: protected playback lives on the dedicated player route. */}
-          <div className="video-container aspect-video mb-6">
-              <div className="relative w-full h-full bg-surface flex flex-col items-center justify-center">
-                {documentary.thumbnailUrl ? (
-                  <Image
-                    src={documentary.thumbnailUrl}
-                    alt={documentary.title}
-                    fill
-                    className="object-cover opacity-50"
-                  />
-                ) : null}
+          <div className="video-container min-h-[25rem] mb-6 md:min-h-[30rem]">
+              <div className="relative flex min-h-[25rem] w-full flex-col items-center justify-center bg-surface md:min-h-[30rem]">
+                <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />
                 <div className="relative z-10 text-center p-8">
                   <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
                     <Play className="w-10 h-10 text-primary" />
@@ -46,7 +44,7 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
                   <p className="text-text-muted mb-4">
                     {hasAccess ? 'Open the distraction-free player when you are ready.' : 'Subscribe to watch this documentary'}
                   </p>
-                  <Link href={hasAccess ? `/player?doc=${documentary.id}` : `/pricing`} className="btn-primary">{hasAccess ? 'Open player' : 'Subscribe now'}</Link>
+                  <Link href={hasAccess ? `/player?doc=${documentary.id}` : `/pricing`} className="btn-primary mt-8 inline-flex">{hasAccess ? 'Open player' : 'Subscribe now'}</Link>
                 </div>
               </div>
           </div>
@@ -59,7 +57,7 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
                 <video
                   controls
                   className="w-full h-full"
-                  poster={documentary.thumbnailUrl || undefined}
+                  poster={thumbnail}
                 >
                   <source src={documentary.trailerUrl} type="video/mp4" />
                   Your browser does not support the video tag.
@@ -67,6 +65,7 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
               </div>
             </div>
           )}
+          {!hasAccess && !documentary.trailerUrl && <div className="mb-8 rounded-xl border border-border bg-surface p-6 text-center text-text-muted">No trailer available. {trailerMessage}</div>}
 
           {/* Title and metadata */}
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -133,13 +132,15 @@ export function DocumentaryDetail({ documentary, hasAccess }: DocumentaryDetailP
                   </svg>
                 </div>
                 <p className="text-white font-medium">Premium content</p>
-                <p className="text-text-muted text-sm mt-2 mb-4">
-                  Subscribe to watch this documentary
+                <p className="mb-5 mt-2 break-words text-sm text-text-muted">
+                  {trailerMessage}
                 </p>
-                <Link href={`/pricing`} className="btn-primary w-full">
-                  Subscribe Now
-                </Link>
-                <Link href={`/register?plan=single&doc=${documentary.id}`} className="mt-3 inline-block text-sm text-text-muted underline">Buy only this documentary · 200 RWF</Link>
+                <div className="flex flex-col items-center gap-3">
+                  <Link href={`/pricing`} className="btn-primary flex w-full items-center justify-center text-center">
+                    Subscribe Now
+                  </Link>
+                  <Link href={`/register?plan=single&doc=${documentary.id}`} className="inline-block text-sm leading-5 text-text-muted underline">Buy only this documentary · 200 RWF</Link>
+                </div>
               </div>
             )}
           </div>

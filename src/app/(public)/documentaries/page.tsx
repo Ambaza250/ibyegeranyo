@@ -12,9 +12,9 @@ export default async function DocumentariesPage() {
   const documentaries = await getAllDocumentaries();
 
   return (
-    <div className="min-h-screen pt-20">
-      <div className="container py-12">
-        <div className="mb-12">
+    <div className="min-h-screen">
+      <div className="container page-section">
+        <div className="mb-12 md:mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Documentaries
           </h1>

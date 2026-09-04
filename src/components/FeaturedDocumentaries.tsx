@@ -5,10 +5,11 @@ export async function FeaturedDocumentaries() {
   const documentaries = await getFeaturedDocumentaries();
 
   return (
-    <section className="py-20 bg-background">
+    <section className="page-section bg-background">
       <div className="container">
-        <div className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+        <div className="mb-12 md:mb-14">
+          <p className="text-sm font-semibold tracking-[.16em] text-gold">CURATED STORIES</p>
+          <h2 className="mt-3 font-[family-name:var(--font-fraunces)] text-3xl md:text-5xl text-white mb-4">
             Featured Documentaries
           </h2>
           <p className="text-text-muted max-w-2xl">
@@ -17,7 +18,7 @@ export async function FeaturedDocumentaries() {
         </div>
 
         {documentaries.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="rounded-xl border border-border bg-surface py-12 text-center">
             <p className="text-text-muted">No featured documentaries available yet.</p>
           </div>
         ) : (

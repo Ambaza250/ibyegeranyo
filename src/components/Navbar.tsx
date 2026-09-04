@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, LogOut } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 interface User {
   id: string;
@@ -19,6 +20,7 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
+  const { locale, setLocale, t } = useI18n();
 
   const fetchUser = async () => {
     try {
@@ -51,10 +53,10 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/documentaries', label: 'Documentaries' },
-    { href: '/about', label: 'About' },
-    { href: '/pricing', label: 'Pricing' },
+    { href: '/', label: t('home') },
+    { href: '/documentaries', label: t('documentaries') },
+    { href: '/about', label: t('about') },
+    { href: '/pricing', label: t('pricing') },
   ];
 
   const isActive = (href: string) => {
@@ -69,7 +71,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-[#080B12] shadow-[0_6px_24px_rgba(0,0,0,.26)]">
       <div className="container">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -102,6 +104,9 @@ export function Navbar() {
 
           {/* Right side */}
           <div className="hidden md:flex items-center gap-4">
+            <div className="inline-flex items-center rounded-full border border-border bg-surface p-2 text-lg shadow-inner" aria-label={t('language')}>
+              {(['en', 'rw'] as const).map((item) => <button key={item} onClick={() => setLocale(item)} className={`min-w-22 rounded-full px-6 py-3 font-bold transition-all ${locale === item ? 'bg-gold text-background shadow-sm' : 'text-text-muted hover:bg-surface-hover hover:text-white'}`} aria-pressed={locale === item}>{item.toUpperCase()}</button>)}
+            </div>
             {!isLoading && (
               <>
                 {user ? (
@@ -113,14 +118,13 @@ export function Navbar() {
                         user.subscriptionStatus === 'pending' ? 'text-yellow-500' :
                         'text-text-muted'
                       }`}>
-                        {user.subscriptionStatus === 'active' ? 'Active' :
-                         user.subscriptionStatus === 'pending' ? 'Pending' : 'Free'}
+                        {user.subscriptionStatus === 'active' ? t('active') : user.subscriptionStatus === 'pending' ? t('pending') : t('free')}
                       </div>
                     </div>
                     <button
                       onClick={handleLogout}
                       className="p-2 text-text-muted hover:text-white transition-colors"
-                      title="Logout"
+                      title={t('logout')}
                     >
                       <LogOut size={20} />
                     </button>
@@ -131,13 +135,13 @@ export function Navbar() {
                       href="/login"
                       className="text-sm font-medium text-text-secondary hover:text-white transition-colors"
                     >
-                      Login
+                      {t('login')}
                     </Link>
                     <Link
                       href="/register"
                       className="btn-primary text-sm"
                     >
-                      Register
+                      {t('register')}
                     </Link>
                   </>
                 )}
@@ -148,7 +152,8 @@ export function Navbar() {
           {/* Mobile menu button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-text-secondary hover:text-white"
+            className="md:hidden min-h-11 min-w-11 p-2 text-text-secondary hover:text-white"
+            aria-label={isOpen ? 'Close menu' : 'Open menu'} aria-expanded={isOpen}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -157,7 +162,7 @@ export function Navbar() {
 
       {/* Mobile Navigation */}
       {isOpen && (
-        <div className="md:hidden glass border-t border-border">
+        <div className="md:hidden border-t border-border bg-[#080B12]">
           <div className="container py-4 space-y-4">
             {navLinks.map((link) => (
               <Link
@@ -173,17 +178,18 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <div className="inline-flex rounded-xl border border-border bg-surface p-2">{(['en', 'rw'] as const).map((item) => <button key={item} onClick={() => setLocale(item)} className={`min-h-12 min-w-20 rounded-lg px-5 text-base font-bold transition-colors ${locale === item ? 'bg-gold text-background' : 'text-text-muted hover:text-white'}`} aria-pressed={locale === item}>{item.toUpperCase()}</button>)}</div>
             <div className="pt-4 border-t border-border space-y-3">
               {user ? (
                 <>
                   <div className="text-sm text-text-secondary">{user.fullName}</div>
-                  <Link href="/account" onClick={() => setIsOpen(false)} className="block text-sm text-text-muted hover:text-white">My account</Link>
+                  <Link href="/account" onClick={() => setIsOpen(false)} className="block text-sm text-text-muted hover:text-white">{t('account')}</Link>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 text-sm text-text-muted hover:text-white"
                   >
                     <LogOut size={16} />
-                    Logout
+                    {t('logout')}
                   </button>
                 </>
               ) : (
@@ -193,14 +199,14 @@ export function Navbar() {
                     onClick={() => setIsOpen(false)}
                     className="block text-sm font-medium text-text-secondary hover:text-white"
                   >
-                    Login
+                    {t('login')}
                   </Link>
                   <Link
                     href="/register"
                     onClick={() => setIsOpen(false)}
                     className="block btn-primary text-sm text-center"
                   >
-                    Register
+                    {t('register')}
                   </Link>
                 </>
               )}

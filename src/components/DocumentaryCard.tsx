@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Play, Star } from 'lucide-react';
 import type { Documentary } from '@/lib/types';
 
@@ -9,6 +8,12 @@ interface DocumentaryCardProps {
 }
 
 export function DocumentaryCard({ documentary, featured = false }: DocumentaryCardProps) {
+  const fallbacks = [
+    'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/landscapes/nature-mountains.jpg',
+    'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/landscapes/landscape-panorama.jpg',
+    'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/animals/three-dogs.jpg',
+  ];
+  const thumbnail = documentary.thumbnailUrl || fallbacks[documentary.id.charCodeAt(0) % fallbacks.length];
   return (
     <Link
       href={`/documentaries/${documentary.id}`}
@@ -16,12 +21,11 @@ export function DocumentaryCard({ documentary, featured = false }: DocumentaryCa
     >
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden">
-        {documentary.thumbnailUrl ? (
-          <Image
-            src={documentary.thumbnailUrl}
+        {thumbnail ? (
+          <img
+            src={thumbnail}
             alt={documentary.title}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full bg-surface-hover flex items-center justify-center">

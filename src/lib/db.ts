@@ -2,6 +2,7 @@ import { getDb, collections } from './firebase';
 import { generateId, calculateExpiryDate } from './utils';
 import type { Documentary, Payment, User, PlanType } from './types';
 import { PLANS } from './types';
+import { getVideoThumbnail } from './cloudinary';
 
 // ==================== DOCUMENTARY OPERATIONS ====================
 
@@ -63,7 +64,7 @@ export async function createDocumentary(data: {
     rating: data.rating || null,
     releaseDate: data.releaseDate || null,
     status: 'published',
-    thumbnailUrl: data.thumbnailUrl || null,
+    thumbnailUrl: data.thumbnailUrl || getVideoThumbnail(data.cloudinaryPublicId),
     videoUrl: data.cloudinarySecureUrl,
     cloudinaryPublicId: data.cloudinaryPublicId,
     cloudinarySecureUrl: data.cloudinarySecureUrl,
@@ -213,6 +214,8 @@ export async function confirmPayment(
   }
   
   const payment = paymentDoc.data() as Payment;
+  if (payment.status !== 'pending') return { success: false, error: 'This payment has already been processed' };
+  if (!payment.proofUrl) return { success: false, error: 'A payment proof is required before confirmation' };
   
   // Get plan details
   const plan = PLANS.find((p) => p.id === payment.plan);
@@ -264,9 +267,13 @@ export async function confirmPayment(
   return { success: true };
 }
 
-export async function rejectPayment(paymentId: string): Promise<void> {
+export async function rejectPayment(paymentId: string): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
   const now = new Date().toISOString();
+  const paymentDoc = await db.collection(collections.payments).doc(paymentId).get();
+  if (!paymentDoc.exists) return { success: false, error: 'Payment not found' };
+  const payment = paymentDoc.data() as Payment;
+  if (payment.status !== 'pending') return { success: false, error: 'This payment has already been processed' };
   
   await db.collection(collections.payments).doc(paymentId).update({
     status: 'rejected',
@@ -274,14 +281,11 @@ export async function rejectPayment(paymentId: string): Promise<void> {
   });
   
   // Get payment to update user
-  const paymentDoc = await db.collection(collections.payments).doc(paymentId).get();
-  if (paymentDoc.exists) {
-    const payment = paymentDoc.data() as Payment;
-    await db.collection(collections.users).doc(payment.userId).update({
-      paymentStatus: 'rejected',
-      updatedAt: now,
-    });
-  }
+  await db.collection(collections.users).doc(payment.userId).update({
+    paymentStatus: 'rejected',
+    updatedAt: now,
+  });
+  return { success: true };
 }
 
 // ==================== USER OPERATIONS ====================

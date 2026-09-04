@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const documentary = await getDocumentaryById(id);
 
-  if (!documentary) {
+  if (!documentary || documentary.status !== 'published') {
     return { title: 'Documentary Not Found' };
   }
 
@@ -40,7 +40,7 @@ export default async function DocumentaryPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen pt-20">
-      <DocumentaryDetail documentary={safeDocumentary} hasAccess={access.hasAccess} />
+      <DocumentaryDetail documentary={safeDocumentary} hasAccess={access.hasAccess} accessReason={access.reason} />
     </div>
   );
 }
