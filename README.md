@@ -34,3 +34,31 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Ibyegeranyo
+
+## Cloudflare R2 uploads
+
+The admin upload flow sends files straight from the browser to a short-lived,
+single-object R2 PUT URL. Configure the R2 bucket CORS policy to allow `PUT`
+from each deployed application origin, with the `Content-Type` request header
+and `ETag` exposed. A suitable rule is:
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://your-production-domain.example"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Replace the production placeholder with the deployed site origin. Do not add
+R2 credentials to `NEXT_PUBLIC_*` variables.
+
+The application keeps video objects private: `videoUrl` points to its
+access-controlled media route, while public thumbnails and trailers use the
+same route without the subscription check. R2 object keys are also recorded in
+the documentary record for verification and future storage operations.

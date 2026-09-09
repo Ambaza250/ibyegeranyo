@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'node:stream';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -55,19 +56,51 @@ export async function uploadToCloudinary(
   });
 }
 
-// Let Cloudinary fetch a public Vercel Blob directly. This avoids buffering a
-// potentially multi-gigabyte video in the serverless function's memory.
+// Import a public Vercel Blob in 20 MB chunks. Cloudinary's regular remote-URL
+// upload endpoint rejects files over 100 MB, while this endpoint accepts video
+// uploads in chunks without buffering the complete file in application memory.
 export async function uploadUrlToCloudinary(
   sourceUrl: string,
   options: { folder?: string; resourceType?: 'video' | 'image' } = {}
 ): Promise<CloudinaryUploadResult> {
-  const result = await cloudinary.uploader.upload(sourceUrl, {
-    folder: options.folder || 'ibyegeranyo/documentaries',
-    resource_type: options.resourceType || 'video',
-    overwrite: true,
-    invalidate: true,
-  });
-  return { publicId: result.public_id, secureUrl: result.secure_url, duration: result.duration, format: result.format, bytes: result.bytes };
+  const source = await fetch(sourceUrl);
+  if (!source.ok || !source.body) {
+    throw new Error(`Unable to read staged video: ${source.status} ${source.statusText}`);
+  }
+  const sourceBody = source.body;
+
+  const result = await new Promise<Awaited<ReturnType<typeof cloudinary.uploader.upload>>>(
+    (resolve, reject) => {
+      const destination = cloudinary.uploader.upload_chunked_stream(
+        {
+          folder: options.folder || 'ibyegeranyo/documentaries',
+          resource_type: options.resourceType || 'video',
+          overwrite: true,
+          invalidate: true,
+          chunk_size: 20 * 1024 * 1024,
+          timeout: 10 * 60 * 1000,
+        },
+        (error, uploadResult) => {
+          if (error) reject(error);
+          else if (uploadResult) resolve(uploadResult);
+          else reject(new Error('Upload failed - no result'));
+        },
+      );
+
+      Readable.fromWeb(sourceBody as unknown as Parameters<typeof Readable.fromWeb>[0])
+        .on('error', reject)
+        .pipe(destination)
+        .on('error', reject);
+    },
+  );
+
+  return {
+    publicId: result.public_id,
+    secureUrl: result.secure_url,
+    duration: result.duration,
+    format: result.format,
+    bytes: result.bytes,
+  };
 }
 
 // Get video thumbnail from Cloudinary

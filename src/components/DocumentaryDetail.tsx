@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Play, Star, Calendar, Clock, Tag } from 'lucide-react';
 import type { Documentary } from '@/lib/types';
+import { getVideoThumbnail } from '@/lib/cloudinary';
 
 interface DocumentaryDetailProps {
   documentary: Documentary;
@@ -10,7 +11,7 @@ interface DocumentaryDetailProps {
 
 export function DocumentaryDetail({ documentary, hasAccess, accessReason }: DocumentaryDetailProps) {
   const fallbackThumbnail = 'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/landscapes/nature-mountains.jpg';
-  const thumbnail = documentary.thumbnailUrl || fallbackThumbnail;
+  const thumbnail = documentary.thumbnailUrl || (documentary.cloudinaryPublicId ? getVideoThumbnail(documentary.cloudinaryPublicId) : fallbackThumbnail);
   const trailerMessage = accessReason === 'not_authenticated'
     ? 'Sign in or subscribe to watch the full documentary. Until then, you can watch the trailer.'
     : 'Your payment has not been confirmed or your access has ended. You can watch the trailer until access is active.';

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Play, Star } from 'lucide-react';
 import type { Documentary } from '@/lib/types';
+import { getVideoThumbnail } from '@/lib/cloudinary';
 
 interface DocumentaryCardProps {
   documentary: Documentary;
@@ -13,7 +14,7 @@ export function DocumentaryCard({ documentary, featured = false }: DocumentaryCa
     'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/landscapes/landscape-panorama.jpg',
     'https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_540,q_auto,w_960/samples/animals/three-dogs.jpg',
   ];
-  const thumbnail = documentary.thumbnailUrl || fallbacks[documentary.id.charCodeAt(0) % fallbacks.length];
+  const thumbnail = documentary.thumbnailUrl || (documentary.cloudinaryPublicId ? getVideoThumbnail(documentary.cloudinaryPublicId) : fallbacks[documentary.id.charCodeAt(0) % fallbacks.length]);
   return (
     <Link
       href={`/documentaries/${documentary.id}`}

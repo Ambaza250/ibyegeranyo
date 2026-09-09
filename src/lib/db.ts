@@ -2,7 +2,6 @@ import { getDb, collections } from './firebase';
 import { generateId, calculateExpiryDate } from './utils';
 import type { Documentary, Payment, User, PlanType } from './types';
 import { PLANS } from './types';
-import { getVideoThumbnail } from './cloudinary';
 
 // ==================== DOCUMENTARY OPERATIONS ====================
 
@@ -47,8 +46,8 @@ export async function createDocumentary(data: {
   category: string;
   rating?: number;
   releaseDate?: string;
-  cloudinaryPublicId: string;
-  cloudinarySecureUrl: string;
+  videoUrl: string;
+  videoR2Key?: string;
   videoDuration?: number;
   thumbnailUrl?: string;
   featured?: boolean;
@@ -64,10 +63,13 @@ export async function createDocumentary(data: {
     rating: data.rating || null,
     releaseDate: data.releaseDate || null,
     status: 'published',
-    thumbnailUrl: data.thumbnailUrl || getVideoThumbnail(data.cloudinaryPublicId),
-    videoUrl: data.cloudinarySecureUrl,
-    cloudinaryPublicId: data.cloudinaryPublicId,
-    cloudinarySecureUrl: data.cloudinarySecureUrl,
+    // R2 videos do not have Cloudinary transformations. New uploads wait for a
+    // manually supplied thumbnail; legacy records retain their old URLs.
+    thumbnailUrl: data.thumbnailUrl || null,
+    videoUrl: data.videoUrl,
+    videoR2Key: data.videoR2Key || null,
+    cloudinaryPublicId: null,
+    cloudinarySecureUrl: null,
     videoDuration: data.videoDuration || null,
     trailerUrl: null,
     trailerPublicId: null,
@@ -102,15 +104,16 @@ export async function deleteDocumentary(id: string): Promise<void> {
 
 export async function addTrailerToDocumentary(
   documentaryId: string,
-  trailerPublicId: string,
-  trailerUrl: string
+  trailerUrl: string,
+  trailerR2Key?: string
 ): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
   
   await db.collection(collections.documentaries).doc(documentaryId).update({
-    trailerPublicId,
+    trailerPublicId: null,
     trailerUrl,
+    trailerR2Key: trailerR2Key || null,
     updatedAt: now,
   });
 }
@@ -286,6 +289,11 @@ export async function rejectPayment(paymentId: string): Promise<{ success: boole
     updatedAt: now,
   });
   return { success: true };
+}
+
+export async function setDocumentaryThumbnail(documentaryId: string, thumbnailUrl: string, thumbnailR2Key: string): Promise<void> {
+  const db = getDb();
+  await db.collection(collections.documentaries).doc(documentaryId).update({ thumbnailUrl, thumbnailR2Key, updatedAt: new Date().toISOString() });
 }
 
 // ==================== USER OPERATIONS ====================

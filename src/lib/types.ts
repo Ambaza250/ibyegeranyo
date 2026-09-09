@@ -29,11 +29,14 @@ export interface Documentary {
   releaseDate: string | null;
   status: 'draft' | 'published' | 'archived';
   thumbnailUrl: string | null;
+  thumbnailR2Key?: string | null;
   videoUrl: string | null;
+  videoR2Key?: string | null;
   cloudinaryPublicId: string | null;
   cloudinarySecureUrl: string | null;
   videoDuration: number | null;
   trailerUrl: string | null;
+  trailerR2Key?: string | null;
   trailerPublicId: string | null;
   createdAt: string;
   updatedAt: string;
