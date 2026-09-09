@@ -27,9 +27,11 @@ export function Hero() {
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
           {t('heroTitle')}
         </h1>
-        <p className="text-center text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-8">
-          {t('heroDescription')}
-        </p>
+        <div className="mb-8 flex w-full justify-center">
+          <p className="w-fit max-w-full text-center text-lg text-text-secondary md:text-xl">
+            {t('heroDescription')}
+          </p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/pricing" className="btn-primary text-lg px-8 py-3">
             {t('subscribe')}

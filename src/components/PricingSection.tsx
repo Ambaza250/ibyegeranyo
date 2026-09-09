@@ -14,9 +14,11 @@ export function PricingSection() {
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             {t('Choose Your Plan')}
           </h2>
-          <p className="text-text-muted max-w-2xl mx-auto">
-            {t('Get unlimited access to all documentaries with our flexible subscription plans.')}
-          </p>
+          <div className="flex w-full justify-center">
+            <p className="w-fit max-w-full text-center text-text-muted">
+              {t('Get unlimited access to all documentaries with our flexible subscription plans.')}
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:gap-7">
