@@ -17,27 +17,61 @@ const fraunces = Fraunces({
   display: 'swap',
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+  'https://ibyegeranyo.vercel.app';
+
 export const metadata: Metadata = {
-  title: 'Aime Christian Documentaries | Ibyegeranyo.com',
-  description: 'Premium access to advertisement-free Rwandan stories and investigations. Watch Aime Christian documentaries ad-free.',
-  keywords: ['documentaries', 'Rwanda', 'Aime Christian', 'Ibyegeranyo', 'African stories', 'investigations'],
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'Aime Christian Documentaries | Ibyegeranyo.com',
+    template: '%s | Ibyegeranyo.com',
+  },
+  description:
+    'Premium ad-free Rwandan documentaries and investigations by Aime Christian. Watch exclusive stories on Ibyegeranyo.com.',
+  keywords: [
+    'documentaries',
+    'Rwanda',
+    'Aime Christian',
+    'Ibyegeranyo',
+    'African stories',
+    'investigations',
+    'Rwandan documentaries',
+    'ad-free documentaries',
+  ],
   authors: [{ name: 'Aime Christian' }],
+  creator: 'Aime Christian',
+  publisher: 'Ibyegeranyo.com',
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'Aime Christian Documentaries | Ibyegeranyo.com',
-    description: 'Premium access to advertisement-free Rwandan stories and investigations.',
+    description:
+      'Premium ad-free Rwandan documentaries and investigations by Aime Christian.',
     type: 'website',
     locale: 'en_US',
     siteName: 'Ibyegeranyo.com',
+    url: siteUrl,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Aime Christian Documentaries | Ibyegeranyo.com',
-    description: 'Premium access to advertisement-free Rwandan stories and investigations.',
+    description:
+      'Premium ad-free Rwandan documentaries and investigations by Aime Christian.',
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
+  category: 'entertainment',
 };
 
 export default function RootLayout({
@@ -50,9 +84,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col">
         <I18nProvider>
           <Navbar />
-          <main className="flex-1 page-shell">
-            {children}
-          </main>
+          <main className="flex-1 page-shell">{children}</main>
           <Footer />
         </I18nProvider>
       </body>
