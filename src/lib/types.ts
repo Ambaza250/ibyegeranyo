@@ -109,3 +109,24 @@ export const PLANS: Plan[] = [
     features: ['One documentary', 'Ad-free viewing'],
   },
 ];
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  createdAt: string;
+}
+
+export interface Session {
+  userId: string;
+  phone: string;
+  fullName: string;
+  subscriptionStatus: string;
+  expiresAt: string;
+}
+
+export interface AdminSession {
+  adminId: string;
+  username: string;
+  expiresAt: string;
+}
