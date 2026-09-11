@@ -25,12 +25,12 @@ export function PricingSection() {
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`pricing-card card relative flex min-h-[20.25rem] flex-col p-8 md:p-10 ${
+              className={`pricing-card card relative flex min-h-[20.25rem] flex-col ${
                 plan.id === 'monthly' ? 'border-primary ring-1 ring-primary' : ''
               }`}
             >
               {plan.id === 'monthly' && (
-                <div className="absolute right-5 top-5">
+                <div className="absolute right-6 top-6">
                   <span className="badge badge-primary">{t('Most Popular')}</span>
                 </div>
               )}
