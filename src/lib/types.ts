@@ -32,6 +32,10 @@ export interface Documentary {
   thumbnailR2Key?: string | null;
   videoUrl: string | null;
   videoR2Key?: string | null;
+  /** Cloudflare Stream video UID (new uploads). Absent on legacy R2-only docs. */
+  streamUid?: string | null;
+  /** ready | processing | error | null (legacy) */
+  streamStatus?: 'ready' | 'processing' | 'error' | null;
   cloudinaryPublicId: string | null;
   cloudinarySecureUrl: string | null;
   videoDuration: number | null;
@@ -94,35 +98,14 @@ export const PLANS: Plan[] = [
     price: 22000,
     duration: 365,
     description: '1 year access to all documentaries',
-    features: ['Full documentary access', 'Ad-free viewing', 'Watch on any device', 'Best savings'],
+    features: ['Full documentary access', 'Ad-free viewing', 'Watch on any device', 'Best annual value'],
   },
   {
     id: 'single',
-    name: 'Single Documentary',
-    price: 200,
-    duration: 30,
-    description: 'Access to one documentary for 30 days',
-    features: ['One documentary access', 'Ad-free viewing', '30 days access'],
+    name: 'Single documentary',
+    price: 500,
+    duration: 7,
+    description: 'Access to one documentary for 7 days',
+    features: ['One documentary', 'Ad-free viewing'],
   },
 ];
-
-export interface AdminUser {
-  id: string;
-  username: string;
-  passwordHash: string;
-  createdAt: string;
-}
-
-export interface Session {
-  userId: string;
-  phone: string;
-  fullName: string;
-  subscriptionStatus: string;
-  expiresAt: string;
-}
-
-export interface AdminSession {
-  adminId: string;
-  username: string;
-  expiresAt: string;
-}
