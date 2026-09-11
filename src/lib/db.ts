@@ -51,11 +51,13 @@ export async function createDocumentary(data: {
   videoDuration?: number;
   thumbnailUrl?: string;
   featured?: boolean;
+  streamUid?: string | null;
+  streamStatus?: 'ready' | 'processing' | 'error' | null;
 }): Promise<string> {
   const db = getDb();
   const id = generateId();
   const now = new Date().toISOString();
-  
+
   const documentary: Omit<Documentary, 'id'> = {
     title: data.title,
     summary: data.summary,
@@ -63,11 +65,11 @@ export async function createDocumentary(data: {
     rating: data.rating || null,
     releaseDate: data.releaseDate || null,
     status: 'published',
-    // R2 videos do not have Cloudinary transformations. New uploads wait for a
-    // manually supplied thumbnail; legacy records retain their old URLs.
     thumbnailUrl: data.thumbnailUrl || null,
     videoUrl: data.videoUrl,
     videoR2Key: data.videoR2Key || null,
+    streamUid: data.streamUid ?? null,
+    streamStatus: data.streamStatus ?? null,
     cloudinaryPublicId: null,
     cloudinarySecureUrl: null,
     videoDuration: data.videoDuration || null,
@@ -78,10 +80,35 @@ export async function createDocumentary(data: {
     featured: data.featured || false,
     metadata: {},
   };
-  
+
   await db.collection(collections.documentaries).doc(id).set(documentary);
-  
   return id;
+}
+
+export async function updateDocumentaryStreamStatus(
+  streamUid: string,
+  status: 'ready' | 'processing' | 'error',
+  extra?: { videoDuration?: number }
+): Promise<void> {
+  const db = getDb();
+  const snapshot = await db
+    .collection(collections.documentaries)
+    .where('streamUid', '==', streamUid)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return;
+
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = {
+    streamStatus: status,
+    updatedAt: now,
+  };
+  if (extra?.videoDuration != null) {
+    update.videoDuration = extra.videoDuration;
+  }
+
+  await snapshot.docs[0].ref.update(update);
 }
 
 export async function updateDocumentary(
