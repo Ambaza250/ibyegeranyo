@@ -25,26 +25,37 @@ export function PricingSection() {
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`pricing-card card relative flex min-h-[20.25rem] flex-col p-5 md:p-6 ${
+              className={`pricing-card card relative flex min-h-[20.25rem] flex-col p-8 md:p-10 ${
                 plan.id === 'monthly' ? 'border-primary ring-1 ring-primary' : ''
               }`}
             >
               {plan.id === 'monthly' && (
-                <div className="absolute right-4 top-4">
+                <div className="absolute right-5 top-5">
                   <span className="badge badge-primary">{t('Most Popular')}</span>
                 </div>
               )}
-              <h3 className={`mb-2 text-lg font-semibold text-white ${plan.id === 'monthly' ? 'pr-28' : ''}`}>{t(plan.name)}</h3>
-              <div className="mb-3">
+              <h3
+                className={`mb-3 text-lg font-semibold text-white ${
+                  plan.id === 'monthly' ? 'pr-28' : ''
+                }`}
+              >
+                {t(plan.name)}
+              </h3>
+              <div className="mb-4">
                 <span className="text-3xl font-bold text-white">
                   {plan.price.toLocaleString()}
                 </span>
                 <span className="text-text-muted"> RWF</span>
               </div>
-              <p className="mb-4 text-sm leading-5 text-text-muted">{t(plan.description)}</p>
-              <ul className="mb-5 space-y-1.5">
+              <p className="mb-5 text-sm leading-6 text-text-muted">
+                {t(plan.description)}
+              </p>
+              <ul className="mb-6 space-y-2.5">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-sm text-text-secondary">
+                  <li
+                    key={feature}
+                    className="flex items-center gap-2.5 text-sm text-text-secondary"
+                  >
                     <Check className="w-4 h-4 text-primary flex-shrink-0" />
                     {t(feature)}
                   </li>
@@ -53,9 +64,7 @@ export function PricingSection() {
               <Link
                 href={`/register?plan=${plan.id}`}
                 className={`mt-auto inline-flex min-h-11 items-center justify-center self-center rounded-md px-6 py-3 text-sm font-semibold transition-colors ${
-                  plan.id === 'monthly'
-                    ? 'btn-primary'
-                    : 'btn-secondary'
+                  plan.id === 'monthly' ? 'btn-primary' : 'btn-secondary'
                 }`}
               >
                 {t('Get Started')}
@@ -65,7 +74,9 @@ export function PricingSection() {
         </div>
 
         <p className="text-center text-text-muted text-sm mt-8">
-          {t('All payments are processed manually via MTN MoMo. Access is granted after verification.')}
+          {t(
+            'All payments are processed manually via MTN MoMo. Access is granted after verification.'
+          )}
         </p>
       </div>
     </section>
