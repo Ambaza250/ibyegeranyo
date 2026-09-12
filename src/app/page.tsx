@@ -1,4 +1,5 @@
 import { Hero } from '@/components/Hero';
+import { TopDocumentary } from '@/components/TopDocumentary';
 import { FeaturedDocumentaries } from '@/components/FeaturedDocumentaries';
 import { RecentlyAdded } from '@/components/RecentlyAdded';
 import { PricingSection } from '@/components/PricingSection';
@@ -33,6 +34,7 @@ export default function HomePage() {
         }}
       />
       <Hero />
+      <TopDocumentary />
       <FeaturedDocumentaries />
       <RecentlyAdded />
       <PricingSection />
