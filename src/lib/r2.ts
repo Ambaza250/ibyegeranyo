@@ -67,6 +67,20 @@ export async function createPresignedR2PutUrl(key: string, expiresIn = 15 * 60) 
   });
 }
 
+/** Short-lived GET URL so Cloudflare Stream can pull a private R2 object. */
+export async function createPresignedR2GetUrl(key: string, expiresIn = 60 * 60) {
+  const { bucket } = r2Config();
+  const clockOffset = await getR2ClockOffset();
+  return getSignedUrl(
+    r2Client(),
+    new GetObjectCommand({ Bucket: bucket, Key: key }),
+    {
+      expiresIn,
+      signingDate: new Date(Date.now() + clockOffset),
+    }
+  );
+}
+
 /**
  * A stable browser URL for the uploaded asset. The endpoint may be a public
  * R2 custom domain or a path-style R2 endpoint configured for public reads.

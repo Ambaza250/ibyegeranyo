@@ -51,11 +51,13 @@ export async function createDocumentary(data: {
   videoDuration?: number;
   thumbnailUrl?: string;
   featured?: boolean;
+  streamUid?: string | null;
+  streamStatus?: 'ready' | 'processing' | 'error' | null;
 }): Promise<string> {
   const db = getDb();
   const id = generateId();
   const now = new Date().toISOString();
-  
+
   const documentary: Omit<Documentary, 'id'> = {
     title: data.title,
     summary: data.summary,
@@ -63,11 +65,11 @@ export async function createDocumentary(data: {
     rating: data.rating || null,
     releaseDate: data.releaseDate || null,
     status: 'published',
-    // R2 videos do not have Cloudinary transformations. New uploads wait for a
-    // manually supplied thumbnail; legacy records retain their old URLs.
     thumbnailUrl: data.thumbnailUrl || null,
     videoUrl: data.videoUrl,
     videoR2Key: data.videoR2Key || null,
+    streamUid: data.streamUid ?? null,
+    streamStatus: data.streamStatus ?? null,
     cloudinaryPublicId: null,
     cloudinarySecureUrl: null,
     videoDuration: data.videoDuration || null,
@@ -78,10 +80,35 @@ export async function createDocumentary(data: {
     featured: data.featured || false,
     metadata: {},
   };
-  
+
   await db.collection(collections.documentaries).doc(id).set(documentary);
-  
   return id;
+}
+
+export async function updateDocumentaryStreamStatus(
+  streamUid: string,
+  status: 'ready' | 'processing' | 'error',
+  extra?: { videoDuration?: number }
+): Promise<void> {
+  const db = getDb();
+  const snapshot = await db
+    .collection(collections.documentaries)
+    .where('streamUid', '==', streamUid)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return;
+
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = {
+    streamStatus: status,
+    updatedAt: now,
+  };
+  if (extra?.videoDuration != null) {
+    update.videoDuration = extra.videoDuration;
+  }
+
+  await snapshot.docs[0].ref.update(update);
 }
 
 export async function updateDocumentary(
@@ -208,28 +235,31 @@ export async function confirmPayment(
   adminId: string
 ): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
-  
+
   // Get payment
   const paymentDoc = await db.collection(collections.payments).doc(paymentId).get();
-  
+
   if (!paymentDoc.exists) {
     return { success: false, error: 'Payment not found' };
   }
-  
+
   const payment = paymentDoc.data() as Payment;
-  if (payment.status !== 'pending') return { success: false, error: 'This payment has already been processed' };
-  if (!payment.proofUrl) return { success: false, error: 'A payment proof is required before confirmation' };
-  
+  if (payment.status !== 'pending') {
+    return { success: false, error: 'This payment has already been processed' };
+  }
+
+  // Proof is optional — admin may confirm without one
+
   // Get plan details
   const plan = PLANS.find((p) => p.id === payment.plan);
   if (!plan) {
     return { success: false, error: 'Invalid plan' };
   }
-  
+
   const now = new Date();
   const nowISO = now.toISOString();
   const expiryDate = calculateExpiryDate(now, plan.duration);
-  
+
   // Update payment
   await db.collection(collections.payments).doc(paymentId).update({
     status: 'confirmed',
@@ -238,14 +268,14 @@ export async function confirmPayment(
     startDate: nowISO,
     expiresAt: expiryDate.toISOString(),
   });
-  
+
   // A single-documentary purchase is a scoped entitlement, not a subscription.
   // Keep an existing full subscription intact when confirming one.
   const userUpdate: Record<string, unknown> = {
     paymentStatus: 'confirmed',
     updatedAt: nowISO,
   };
-  
+
   // For single documentary plan, add documentary to user's access list
   if (payment.plan === 'single' && payment.documentaryId) {
     const userDoc = await db.collection(collections.users).doc(payment.userId).get();
@@ -264,9 +294,9 @@ export async function confirmPayment(
     userUpdate.endDate = expiryDate.toISOString();
     userUpdate.expiresAt = expiryDate.toISOString();
   }
-  
+
   await db.collection(collections.users).doc(payment.userId).update(userUpdate);
-  
+
   return { success: true };
 }
 

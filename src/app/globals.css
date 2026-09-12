@@ -151,6 +151,17 @@ body {
 
 /* Subscription cards deliberately have compact, even spacing independent of
    the general card rhythm used by documentary cards. */
+/* Subscription cards: more breathing room between text and card edges */
+.pricing-card {
+  padding: 2.25rem 2rem !important;
+}
+
+@media (min-width: 768px) {
+  .pricing-card {
+    padding: 2.75rem 2.5rem !important;
+  }
+}
+
 .pricing-card > * {
   padding-inline: 0 !important;
 }
