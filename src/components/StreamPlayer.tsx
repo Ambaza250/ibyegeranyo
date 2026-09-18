@@ -1,58 +1,57 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Hls from 'hls.js';
 
 type Props = {
   docId: string;
   poster?: string | null;
-  /** Legacy R2 progressive URL — used if Stream token fails or still processing */
+  /** Progressive MP4 fallback */
   fallbackUrl?: string | null;
+  /** HLS master playlist (preferred) */
+  hlsPlaylistUrl?: string | null;
 };
 
-export function StreamPlayer({ docId, poster, fallbackUrl }: Props) {
-  const [token, setToken] = useState<string | null>(null);
+export function StreamPlayer({ docId, poster, fallbackUrl, hlsPlaylistUrl }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
 
+  // Prefer HLS if available
   useEffect(() => {
-    let cancelled = false;
+    if (!hlsPlaylistUrl || !videoRef.current) return;
 
-    (async () => {
-      try {
-        const res = await fetch(`/api/stream-token?doc=${encodeURIComponent(docId)}`);
-        if (!res.ok) {
-          if (fallbackUrl) {
-            if (!cancelled) setUseFallback(true);
-            return;
-          }
-          throw new Error('Unable to authorize playback');
-        }
-        const data = (await res.json()) as { token: string };
-        if (!cancelled) setToken(data.token);
-      } catch (e) {
-        if (fallbackUrl && !cancelled) {
+    const video = videoRef.current;
+    let hls: Hls | null = null;
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 90,
+      });
+      hls.loadSource(hlsPlaylistUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          console.error('HLS fatal error', data);
           setUseFallback(true);
-          return;
         }
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Playback error');
-        }
-      }
-    })();
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS (Safari / iOS)
+      video.src = hlsPlaylistUrl;
+    } else {
+      setUseFallback(true);
+    }
 
     return () => {
-      cancelled = true;
+      if (hls) hls.destroy();
     };
-  }, [docId, fallbackUrl]);
+  }, [hlsPlaylistUrl]);
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center text-red-300">
-        {error}
-      </div>
-    );
-  }
-
+  // Fallback to progressive MP4
   if (useFallback && fallbackUrl) {
     return (
       <video
@@ -67,27 +66,47 @@ export function StreamPlayer({ docId, poster, fallbackUrl }: Props) {
     );
   }
 
-  if (!token) {
+  if (error) {
     return (
-      <div className="flex h-full items-center justify-center text-text-muted">
-        Loading player…
+      <div className="flex h-full items-center justify-center text-red-300">
+        {error}
       </div>
     );
   }
 
-  const customerCode = process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_CODE;
-  // Prefer env on client; if missing, iframe path still works with full URL from API later.
-  const src = customerCode
-    ? `https://customer-${customerCode}.cloudflarestream.com/${token}/iframe?poster=${encodeURIComponent(poster || '')}`
-    : `https://iframe.videodelivery.net/${token}`;
+  // HLS player
+  if (hlsPlaylistUrl) {
+    return (
+      <video
+        ref={videoRef}
+        controls
+        controlsList="nodownload"
+        disablePictureInPicture
+        className="w-full h-full"
+        poster={poster || undefined}
+        playsInline
+      />
+    );
+  }
+
+  // Still waiting / no HLS yet → show progressive if available
+  if (fallbackUrl) {
+    return (
+      <video
+        controls
+        controlsList="nodownload"
+        disablePictureInPicture
+        className="w-full h-full"
+        poster={poster || undefined}
+      >
+        <source src={fallbackUrl} type="video/mp4" />
+      </video>
+    );
+  }
 
   return (
-    <iframe
-      src={src}
-      title="Documentary player"
-      className="h-full w-full border-0"
-      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-      allowFullScreen
-    />
+    <div className="flex h-full items-center justify-center text-text-muted">
+      Preparing adaptive stream…
+    </div>
   );
 }
