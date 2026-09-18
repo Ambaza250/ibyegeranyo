@@ -47,12 +47,18 @@ async function getR2ClockOffset() {
 export function validateR2Upload(kind: R2AssetKind, contentType: string, size: number) {
   const isVideo = kind === 'documentary' || kind === 'trailer';
   const limit = kind === 'documentary' ? 2 * 1024 ** 3 : kind === 'trailer' ? 500 * 1024 ** 2 : 10 * 1024 ** 2;
-  if (!(isVideo ? videoTypes : imageTypes).has(contentType)) throw new Error(isVideo ? 'Invalid video file type' : 'Invalid thumbnail file type');
-  if (!Number.isFinite(size) || size < 1 || size > limit) throw new Error(`File too large. Maximum size is ${limit / 1024 ** 2}MB`);
+  if (!(isVideo ? videoTypes : imageTypes).has(contentType)) {
+    throw new Error(isVideo ? 'Invalid video file type' : 'Invalid thumbnail file type');
+  }
+  if (!Number.isFinite(size) || size < 1 || size > limit) {
+    throw new Error(`File too large. Maximum size is ${limit / 1024 ** 2}MB`);
+  }
 }
 
 export function createR2ObjectKey(kind: R2AssetKind, filename: string, documentaryId?: string) {
-  const extension = filename.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || (kind === 'thumbnail' ? 'jpg' : 'mp4');
+  const extension =
+    filename.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') ||
+    (kind === 'thumbnail' ? 'jpg' : 'mp4');
   const owner = documentaryId || `new-${randomUUID()}`;
   return `documentaries/${owner}/${kind}/${randomUUID()}.${extension}`;
 }
@@ -67,7 +73,12 @@ export async function createPresignedR2PutUrl(key: string, expiresIn = 15 * 60) 
   });
 }
 
-/** Short-lived GET URL so Cloudflare Stream can pull a private R2 object. */
+/**
+ * Short-lived GET URL.
+ * - Used by Cloudflare Stream to pull a private R2 object for encoding.
+ * - Used by /api/media/r2 to hand the browser a temporary direct link
+ *   so video bytes never transit Vercel.
+ */
 export async function createPresignedR2GetUrl(key: string, expiresIn = 60 * 60) {
   const { bucket } = r2Config();
   const clockOffset = await getR2ClockOffset();
@@ -82,12 +93,12 @@ export async function createPresignedR2GetUrl(key: string, expiresIn = 60 * 60) 
 }
 
 /**
- * A stable browser URL for the uploaded asset. The endpoint may be a public
- * R2 custom domain or a path-style R2 endpoint configured for public reads.
+ * Stable browser-facing URL stored in the database.
+ * Points at our access-controlled route, which issues a short-lived
+ * presigned R2 URL and redirects. The bucket stays private; no long-lived
+ * public URLs or credentials are ever stored.
  */
 export function r2ObjectUrl(key: string) {
-  // Keep the bucket private: the media route streams R2 objects without ever
-  // putting storage credentials or a long-lived public bucket URL in records.
   return `/api/media/r2?key=${encodeURIComponent(key)}`;
 }
 
@@ -109,7 +120,14 @@ export async function assertR2ObjectExists(key: string) {
   return r2Client().send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
 }
 
+/** Low-level GetObject (kept for any internal tooling; media route no longer streams). */
 export async function getR2Object(key: string, range?: string) {
   const { bucket } = r2Config();
-  return r2Client().send(new GetObjectCommand({ Bucket: bucket, Key: key, ...(range ? { Range: range } : {}) }));
+  return r2Client().send(
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ...(range ? { Range: range } : {}),
+    })
+  );
 }
