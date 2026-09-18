@@ -24,9 +24,8 @@ jobs:
           sudo apt-get install -y ffmpeg unzip
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip -q awscliv2.zip
-          sudo ./aws/install
+          sudo ./aws/install --update
           aws --version
-
       - name: Configure R2 (S3-compatible)
         run: |
           aws configure set aws_access_key_id ${{ secrets.R2_ACCESS_KEY_ID }}
