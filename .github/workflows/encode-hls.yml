@@ -15,17 +15,17 @@ on:
 jobs:
   encode:
     runs-on: ubuntu-latest
-    timeout-minutes: 240   # 4 hours max
+    timeout-minutes: 240
 
     steps:
-      - name: Install FFmpeg & AWS CLI
-       run: |
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg unzip
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
-        aws --version
+      - name: Install FFmpeg & AWS CLI v2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg unzip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+          aws --version
 
       - name: Configure R2 (S3-compatible)
         run: |
@@ -78,7 +78,6 @@ jobs:
             --content-type "application/vnd.apple.mpegurl" \
             --exclude "*" --include "*.m3u8"
 
-          # Upload .ts segments with correct type
           aws s3 sync hls/ "s3://${{ secrets.R2_BUCKET }}/documentaries/${DOC_ID}/hls/" \
             --endpoint-url "${{ secrets.R2_ENDPOINT }}" \
             --content-type "video/mp2t" \
@@ -89,8 +88,8 @@ jobs:
           curl -X POST "${{ secrets.APP_WEBHOOK_URL }}/api/webhooks/encoding-complete" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.ENCODING_WEBHOOK_SECRET }}" \
-            -d '{
-              "documentaryId": "${{ steps.vars.outputs.doc_id }}",
-              "hlsPlaylistKey": "documentaries/${{ steps.vars.outputs.doc_id }}/hls/master.m3u8",
-              "status": "ready"
-            }'
+            -d "{
+              \"documentaryId\": \"${{ steps.vars.outputs.doc_id }}\",
+              \"hlsPlaylistKey\": \"documentaries/${{ steps.vars.outputs.doc_id }}/hls/master.m3u8\",
+              \"status\": \"ready\"
+            }"
