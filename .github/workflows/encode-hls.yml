@@ -64,14 +64,22 @@ jobs:
              [v2]scale=w=854:h=480:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2[v2out]; \
              [v3]scale=w=1280:h=720:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2[v3out]; \
              [v4]scale=w=1920:h=1080:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2[v4out]" \
-            -map "[v1out]" -c:v:0 libx264 -b:v:0 800k  -maxrate:v:0 856k  -bufsize:v:0 1200k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
-            -map "[v2out]" -c:v:1 libx264 -b:v:1 1400k -maxrate:v:1 1498k -bufsize:v:1 2100k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
-            -map "[v3out]" -c:v:2 libx264 -b:v:2 2800k -maxrate:v:2 2996k -bufsize:v:2 4200k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
-            -map "[v4out]" -c:v:3 libx264 -b:v:3 5000k -maxrate:v:3 5350k -bufsize:v:3 7500k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
-            -map a:0 -c:a aac -b:a 128k -ac 2 \
+            \
+            -map "[v1out]" -map a:0 -c:v:0 libx264 -b:v:0 800k  -maxrate:v:0 856k  -bufsize:v:0 1200k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
+            -c:a:0 aac -b:a:0 96k -ac 2 \
+            \
+            -map "[v2out]" -map a:0 -c:v:1 libx264 -b:v:1 1400k -maxrate:v:1 1498k -bufsize:v:1 2100k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
+            -c:a:1 aac -b:a:1 128k -ac 2 \
+            \
+            -map "[v3out]" -map a:0 -c:v:2 libx264 -b:v:2 2800k -maxrate:v:2 2996k -bufsize:v:2 4200k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
+            -c:a:2 aac -b:a:2 128k -ac 2 \
+            \
+            -map "[v4out]" -map a:0 -c:v:3 libx264 -b:v:3 5000k -maxrate:v:3 5350k -bufsize:v:3 7500k -g 48 -keyint_min 48 -sc_threshold 0 -preset medium \
+            -c:a:3 aac -b:a:3 128k -ac 2 \
+            \
             -f hls -hls_time 4 -hls_playlist_type vod -hls_flags independent_segments \
             -master_pl_name master.m3u8 \
-            -var_stream_map "v:0,a:0 v:1,a:0 v:2,a:0 v:3,a:0" \
+            -var_stream_map "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3" \
             hls/stream_%v.m3u8
       - name: Upload HLS files to R2
         env:
