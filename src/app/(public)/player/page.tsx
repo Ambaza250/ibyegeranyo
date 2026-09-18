@@ -32,6 +32,12 @@ export default async function PlayerPage({
     documentary.streamStatus !== 'error' &&
     access.hasAccess;
 
+  // Prefer free HLS if encoding is ready
+  const hlsPlaylistUrl =
+    documentary.hlsPlaylistKey && documentary.encodingStatus === 'ready'
+      ? `/api/media/r2?key=${encodeURIComponent(documentary.hlsPlaylistKey)}`
+      : null;
+
   return (
     <div className="min-h-screen bg-black">
       <header className="container flex flex-wrap items-center justify-between gap-4 py-5 border-b border-white/10">
@@ -49,26 +55,14 @@ export default async function PlayerPage({
       </header>
 
       <main className="container max-w-6xl py-8">
-        {access.hasAccess && (useStream || documentary.videoUrl) ? (
+        {access.hasAccess && (useStream || documentary.videoUrl || hlsPlaylistUrl) ? (
           <div className="video-container aspect-video">
-            {useStream && documentary.streamUid ? (
-              <StreamPlayer
-                docId={documentary.id}
-                poster={documentary.thumbnailUrl}
-                fallbackUrl={documentary.videoUrl}
-              />
-            ) : documentary.videoUrl ? (
-              <video
-                controls
-                controlsList="nodownload"
-                disablePictureInPicture
-                className="w-full h-full"
-                poster={documentary.thumbnailUrl || undefined}
-              >
-                <source src={documentary.videoUrl} type="video/mp4" />
-                Your browser does not support video playback.
-              </video>
-            ) : null}
+            <StreamPlayer
+              docId={documentary.id}
+              poster={documentary.thumbnailUrl}
+              fallbackUrl={documentary.videoUrl}
+              hlsPlaylistUrl={hlsPlaylistUrl}
+            />
           </div>
         ) : (
           <div className="relative aspect-video overflow-hidden rounded-lg bg-surface flex items-center justify-center">
@@ -119,8 +113,14 @@ export default async function PlayerPage({
             {documentary.videoDuration
               ? ` · ${Math.floor(documentary.videoDuration / 60)} minutes`
               : ''}
-            {documentary.streamStatus === 'processing'
+            {documentary.encodingStatus === 'pending' ||
+            documentary.encodingStatus === 'processing'
               ? ' · Adaptive qualities encoding…'
+              : documentary.encodingStatus === 'ready'
+                ? ' · Adaptive streaming ready'
+                : ''}
+            {documentary.streamStatus === 'processing'
+              ? ' · Stream encoding…'
               : ''}
           </p>
         </section>
