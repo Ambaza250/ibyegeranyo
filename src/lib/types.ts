@@ -46,6 +46,11 @@ export interface Documentary {
   updatedAt: string;
   featured: boolean;
   metadata: Record<string, unknown>;
+  /** R2 key of the HLS master playlist (documentaries/{id}/hls/master.m3u8) */
+  hlsPlaylistKey?: string | null;
+
+  /** pending | processing | ready | error */
+  encodingStatus?: 'pending' | 'processing' | 'ready' | 'error' | null;
 }
 
 export interface Payment {
