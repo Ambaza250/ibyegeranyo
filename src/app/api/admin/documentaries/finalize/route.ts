@@ -14,6 +14,8 @@ import {
   validateR2Upload,
 } from '@/lib/r2';
 import { copyVideoToStream } from '@/lib/stream';
+import { triggerHlsEncoding } from '@/lib/github';
+import { getDb, collections } from '@/lib/firebase';
 
 type FinalizeBody = {
   kind: R2AssetKind;
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const assetUrl = r2ObjectUrl(body.key);
 
-    // --- Full documentary: R2 master + Stream adaptive encoding ---
+    // --- Full documentary: R2 master + optional Stream + free HLS encoding ---
     if (body.kind === 'documentary') {
       if (!body.title || !body.summary || !body.category) {
         return NextResponse.json(
@@ -83,8 +85,8 @@ export async function POST(request: NextRequest) {
       let streamUid: string | null = null;
       let streamStatus: 'ready' | 'processing' | 'error' | null = null;
 
+      // Optional: still try Cloudflare Stream (if you later activate it)
       try {
-        // Temporary signed GET so Stream can download the private R2 object
         const sourceUrl = await createPresignedR2GetUrl(body.key, 60 * 60);
         const streamResult = await copyVideoToStream({
           sourceUrl,
@@ -94,8 +96,6 @@ export async function POST(request: NextRequest) {
         streamUid = streamResult.uid;
         streamStatus = streamResult.readyToStream ? 'ready' : 'processing';
       } catch (streamError) {
-        // Do not fail the whole upload if Stream is temporarily down.
-        // Admin still gets an R2-backed documentary (legacy player path).
         console.error('Stream copy failed (R2 master still saved):', streamError);
         streamStatus = 'error';
       }
@@ -111,23 +111,36 @@ export async function POST(request: NextRequest) {
         featured: body.featured === true,
         streamUid,
         streamStatus,
+        encodingStatus: 'pending', // ← mark as waiting for free HLS encoding
       });
+
+      // Trigger free HLS encoding via GitHub Actions (non-blocking)
+      try {
+        await triggerHlsEncoding({
+          r2Key: body.key,
+          documentaryId,
+        });
+      } catch (err) {
+        console.error('Failed to trigger HLS encoding:', err);
+        // We don't fail the whole upload if the trigger fails
+      }
 
       return NextResponse.json({
         success: true,
         documentaryId,
         streamUid,
         streamStatus,
+        encodingStatus: 'pending',
         message:
           streamStatus === 'processing'
-            ? 'Documentary uploaded. Adaptive qualities are encoding in the background.'
+            ? 'Documentary uploaded. Adaptive qualities are encoding in the background (Stream + free HLS).'
             : streamStatus === 'ready'
-              ? 'Documentary uploaded and ready on Stream.'
-              : 'Documentary uploaded to R2. Stream encoding failed — legacy playback still works.',
+              ? 'Documentary uploaded and ready on Stream. Free HLS encoding also started.'
+              : 'Documentary uploaded to R2. Free HLS encoding started.',
       });
     }
 
-    // --- Trailer / thumbnail (unchanged, still R2 only) ---
+    // --- Trailer / thumbnail ---
     if (!body.documentaryId || !(await getDocumentaryById(body.documentaryId))) {
       return NextResponse.json({ error: 'Documentary not found' }, { status: 404 });
     }
