@@ -53,6 +53,8 @@ export async function createDocumentary(data: {
   featured?: boolean;
   streamUid?: string | null;
   streamStatus?: 'ready' | 'processing' | 'error' | null;
+  encodingStatus?: 'pending' | 'processing' | 'ready' | 'error' | null;
+  hlsPlaylistKey?: string | null;
 }): Promise<string> {
   const db = getDb();
   const id = generateId();
@@ -70,6 +72,8 @@ export async function createDocumentary(data: {
     videoR2Key: data.videoR2Key || null,
     streamUid: data.streamUid ?? null,
     streamStatus: data.streamStatus ?? null,
+    encodingStatus: data.encodingStatus ?? null,
+    hlsPlaylistKey: data.hlsPlaylistKey ?? null,
     cloudinaryPublicId: null,
     cloudinarySecureUrl: null,
     videoDuration: data.videoDuration || null,
