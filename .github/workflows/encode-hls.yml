@@ -45,6 +45,10 @@ jobs:
           fi
 
       - name: Download master video from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
           echo "Downloading ${{ steps.vars.outputs.r2_key }}..."
           aws s3 cp "s3://${{ secrets.R2_BUCKET }}/${{ steps.vars.outputs.r2_key }}" input.mp4 \
@@ -71,6 +75,10 @@ jobs:
             hls/stream_%v.m3u8
 
       - name: Upload HLS files to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
           DOC_ID="${{ steps.vars.outputs.doc_id }}"
           aws s3 sync hls/ "s3://${{ secrets.R2_BUCKET }}/documentaries/${DOC_ID}/hls/" \
