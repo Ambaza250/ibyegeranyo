@@ -72,6 +72,8 @@ export const metadata: Metadata = {
     },
   },
   category: 'entertainment',
+
+  
 };
 
 export default function RootLayout({
@@ -81,6 +83,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
+      <head>
+    <meta name="facebook-domain-verification" content="sv7dwlqdxg0k3le9cyk9rfdg9ih395" />
+  </head>
       <body className="min-h-screen flex flex-col">
         <I18nProvider>
           <Navbar />
