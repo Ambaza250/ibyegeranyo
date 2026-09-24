@@ -46,7 +46,7 @@ async function getR2ClockOffset() {
 
 export function validateR2Upload(kind: R2AssetKind, contentType: string, size: number) {
   const isVideo = kind === 'documentary' || kind === 'trailer';
-  const limit = kind === 'documentary' ? 2 * 1024 ** 3 : kind === 'trailer' ? 500 * 1024 ** 2 : 10 * 1024 ** 2;
+  const limit = kind === 'documentary' ? 10 * 1024 ** 3 : kind === 'trailer' ? 500 * 1024 ** 2 : 10 * 1024 ** 2;
   if (!(isVideo ? videoTypes : imageTypes).has(contentType)) {
     throw new Error(isVideo ? 'Invalid video file type' : 'Invalid thumbnail file type');
   }
