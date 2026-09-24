@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/auth';
 
 const allowedContentTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
-const maxVideoSize = 2 * 1024 * 1024 * 1024;
+const maxVideoSize = 10 * 1024 * 1024 * 1024;
 
 export const runtime = 'nodejs';
 
