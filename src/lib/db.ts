@@ -482,6 +482,20 @@ export async function getPendingPaymentsCount(): Promise<number> {
     .where('status', '==', 'pending')
     .count()
     .get();
-  
+
   return snapshot.data().count;
+}
+
+export async function getApprovedPaymentsBalance(): Promise<number> {
+  const db = getDb();
+  const snapshot = await db
+    .collection(collections.payments)
+    .where('status', '==', 'confirmed')
+    .get();
+
+  return snapshot.docs.reduce((total, doc) => {
+    const payment = doc.data() as Payment;
+    const amount = payment.receivedAmount ?? payment.amount ?? 0;
+    return total + amount;
+  }, 0);
 }
