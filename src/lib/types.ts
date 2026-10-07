@@ -76,6 +76,8 @@ export interface Payment {
   gatewayStatus?: string | null;
   /** Set when iTechPay reports an amount that doesn't match `amount`. */
   needsReview?: string | null;
+  /** Actual amount iTechPay confirmed was received (after fees). */
+  receivedAmount?: number | null;
   proofUrl: string | null;
   createdAt: string;
   confirmedAt: string | null;

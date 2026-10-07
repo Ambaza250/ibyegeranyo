@@ -177,6 +177,7 @@ export async function createPayment(data: {
     gatewayTransactionId: null,
     gatewayStatus: null,
     needsReview: null,
+    receivedAmount: null,
     proofUrl: null,
     createdAt: now,
     confirmedAt: null,
@@ -202,7 +203,7 @@ export async function createPayment(data: {
 /** Stores what iTechPay last told us about a payment, without changing its status. */
 export async function updatePaymentGatewayInfo(
   paymentId: string,
-  info: { gatewayTransactionId?: string | null; gatewayStatus?: string | null; needsReview?: string | null }
+  info: { gatewayTransactionId?: string | null; gatewayStatus?: string | null; needsReview?: string | null; receivedAmount?: number | null }
 ): Promise<void> {
   const db = getDb();
   const update: Record<string, unknown> = { updatedAt: new Date().toISOString() };
@@ -245,6 +246,16 @@ export async function getPendingPayments(): Promise<Payment[]> {
   const snapshot = await db
     .collection(collections.payments)
     .where('status', '==', 'pending')
+    .orderBy('createdAt', 'desc')
+    .get();
+  
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Payment);
+}
+
+export async function getAllPayments(): Promise<Payment[]> {
+  const db = getDb();
+  const snapshot = await db
+    .collection(collections.payments)
     .orderBy('createdAt', 'desc')
     .get();
   

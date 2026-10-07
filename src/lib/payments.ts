@@ -145,13 +145,15 @@ export async function reconcilePayment(
   if (verified.state === 'paid') {
     if (verified.amount !== null && verified.amount !== payment.amount) {
       const note = `iTechPay reported ${verified.amount} RWF, expected ${payment.amount} RWF`;
-      console.error(`[payments] Amount mismatch for ${payment.id}: ${note}`);
+      console.warn(`[payments] Amount mismatch for ${payment.id}: ${note}`);
       if (!options.dryRun) {
-        await updatePaymentGatewayInfo(payment.id, { gatewayStatus: verified.rawStatus, needsReview: note });
+        await updatePaymentGatewayInfo(payment.id, {
+          gatewayStatus: verified.rawStatus,
+          needsReview: `${note} (iTechPay deducted service fees)`,
+          receivedAmount: verified.amount,
+        });
       }
-      return { status: payment.status, detail: note };
-    }
-    if (verified.amount === null) {
+    } else if (verified.amount === null) {
       console.warn(`[payments] iTechPay verify for ${payment.id} reported no amount; activating on status alone`);
     }
     if (options.dryRun) return { status: 'confirmed', detail: 'dry run: would activate' };

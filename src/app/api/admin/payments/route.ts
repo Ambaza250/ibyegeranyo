@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/auth';
-import { getPendingPayments } from '@/lib/db';
+import { getAllPayments } from '@/lib/db';
 
-// GET /api/admin/payments - Get pending payments
+// GET /api/admin/payments - Get all payments
 export async function GET() {
   try {
     const admin = await getCurrentAdmin();
@@ -14,13 +14,13 @@ export async function GET() {
       );
     }
 
-    const payments = await getPendingPayments();
+    const payments = await getAllPayments();
 
     return NextResponse.json({ success: true, payments });
   } catch (error) {
-    console.error('Error fetching pending payments:', error);
+    console.error('Error fetching payments:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch pending payments' },
+      { error: 'Failed to fetch payments' },
       { status: 500 }
     );
   }
